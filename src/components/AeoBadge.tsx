@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Shield, Phone, Mail, User, Lock, Eye, EyeOff } from "lucide-react";
 import aeos from "@/data/aeos.json";
 
 export default function AeoBadge({ markazName, defaultName }: { markazName: string, defaultName: string }) {

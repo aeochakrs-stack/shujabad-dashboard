@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { School, Search, ArrowLeft, Users, Building, ChevronDown, Filter, Pencil, X } from "lucide-react";
+import { School, Search, ArrowLeft, Users, Building, ChevronDown, Filter, Pencil, X, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
@@ -402,7 +402,7 @@ export default function SchoolsDataPage() {
 
         const filteredRow: Record<string, any> = {};
         selectedKeys.forEach(key => {
-            const colDef = activeTab === 'schools' ? SCHOOLS_COLUMNS.find(c => c.key === key) : STAFF_COLUMNS.find(c => c.key === key);
+            const colDef = activeTab === 'schools' ? SCHOOL_COLUMNS.find(c => c.key === key) : STAFF_COLUMNS.find(c => c.key === key);
             if (colDef) {
                 filteredRow[colDef.label] = fullRow[key];
             } else if (activeTab === 'schools' && fullRow[key] !== undefined) {
@@ -444,7 +444,7 @@ export default function SchoolsDataPage() {
           
           <div className="flex flex-col items-end gap-2">
             <ExportColumnSelector 
-                columns={activeTab === 'schools' ? SCHOOLS_COLUMNS : STAFF_COLUMNS} 
+                columns={activeTab === 'schools' ? SCHOOL_COLUMNS : STAFF_COLUMNS} 
                 onExport={handleExport} 
             />
             {(activeTab === 'schools' ? selectedSchoolIds.size : selectedStaffIds.size) > 0 && (

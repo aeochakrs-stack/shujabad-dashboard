@@ -1,6 +1,7 @@
 import { School, ArrowLeft, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import DynamicTable from "@/components/DynamicTable";
 import SedCategoryTabs from "@/components/SedCategoryTabs";
 
 export const revalidate = 0;

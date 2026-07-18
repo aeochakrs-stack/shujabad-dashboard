@@ -215,7 +215,7 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
                   Teaching & Support Staff ({filteredStaff.length} found)
                 </h2>
                 <button 
-                  onClick={() => setFilters({ name: '', designation: '', seniority: '', cnic: '', phone: '', gender: '', ba_bsc: '', ma_msc: '', prof: '', higher: '', dob: '', join_date: '', retirement: '' })}
+                  onClick={() => setFilters({ name: '', designation: '', bps: '', seniority: '', cnic: '', phone: '', gender: '', ba_bsc: '', ma_msc: '', prof: '', higher: '', dob: '', join_date: '', retirement: '' })}
                   className="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
                 >
                   Clear Column Filters

@@ -2,8 +2,8 @@ import { UploadCloud, FileSpreadsheet } from "lucide-react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-export default function UploadPage() {
-  const cookieStore = cookies();
+export default async function UploadPage() {
+  const cookieStore = await cookies();
   const userRole = cookieStore.get('user_role')?.value;
 
   if (userRole !== 'admin') {

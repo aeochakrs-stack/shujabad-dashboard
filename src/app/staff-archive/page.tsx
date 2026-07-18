@@ -72,7 +72,7 @@ export default async function StaffArchivePage() {
                   </span>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {items.map((staff, idx) => (
+                  {items.map((staff: any, idx: number) => (
                     <div key={staff.id || idx} className="p-4 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row justify-between gap-2">
                       <div>
                         <div className="font-bold text-slate-800">{staff.teacher_name}</div>
