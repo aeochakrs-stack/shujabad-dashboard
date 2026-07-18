@@ -11,7 +11,6 @@ export default function Sidebar() {
   const [role, setRole] = useState('aeo');
 
   useEffect(() => {
-    // Read the role from cookies on mount
     const match = document.cookie.match(new RegExp('(^| )user_role=([^;]+)'));
     if (match) setRole(match[2]);
   }, []);
@@ -26,6 +25,12 @@ export default function Sidebar() {
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
+  };
+
+  const handleLogout = () => {
+    document.cookie = 'auth_session=; path=/; max-age=0';
+    document.cookie = 'user_role=; path=/; max-age=0';
+    window.location.href = '/login';
   };
 
   return (
@@ -55,7 +60,9 @@ export default function Sidebar() {
           <Settings className="w-5 h-5" />
           Settings
         </Link>
-        <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-colors">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-colors">
           <LogOut className="w-5 h-5" />
           Log Out
         </button>
