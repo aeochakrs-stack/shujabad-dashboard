@@ -286,7 +286,8 @@ export default function SchoolsDataPage() {
     } else {
         result = result.filter(s => {
           const rowString = [
-              s.school_name, s.emis_code, s.markaz, s.school_type, s.level, s.solar_meter_reference,
+              s.school_name, s.emis_code, s.markaz, s.school_type, s.level, 
+              s.solar_meter_reference ? `solar solarized ${s.solar_meter_reference}` : '',
               JSON.stringify(s.census_json || {})
           ].join(' ').toLowerCase();
           return matchesSearch(rowString, searchQuery);
