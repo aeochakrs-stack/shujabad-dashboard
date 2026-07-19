@@ -14,8 +14,6 @@ export const SCHOOL_COLUMNS: ExportColumn[] = [
     { key: 'enrollment_current', label: 'Current Enrollment' },
     { key: 'enr_primary', label: 'Primary Portion (K-5)' },
     { key: 'enr_middle', label: 'Middle Portion (6-8)' },
-    { key: 'enr_high', label: 'High Portion (9-10)' },
-    { key: 'enr_hsec', label: 'H.Sec Portion (11-12)' },
     { key: 'enrollment_target', label: 'Target Enrollment' },
     { key: 'total_sanctioned', label: 'Total Sanctioned' },
     { key: 'total_filled', label: 'Total Filled' },
