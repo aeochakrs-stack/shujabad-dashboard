@@ -13,6 +13,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
   }
 
+  // Get role from cookie
+  const cookieHeader = request.headers.get('cookie') || '';
+  const roleMatch = cookieHeader.match(/(?:^| )user_role=([^;]+)/);
+  const role = roleMatch ? roleMatch[1] : null;
+
+  if (role !== 'admin' && role !== 'developer') {
+    return NextResponse.json({ error: 'Only Administrators can create new accounts.' }, { status: 403 });
+  }
+
   // Insert into DB. The schema defaults the role to 'aeo'.
   const { data, error } = await supabase
     .from('users')
@@ -27,11 +36,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create account. ' + error.message }, { status: 500 });
   }
 
-  // Auto-login the user by setting the cookie
-  const response = NextResponse.json({ success: true, role: data.role });
-  response.cookies.set('auth_session', String(data.id), { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
-  response.cookies.set('user_role', data.role, { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
-  response.cookies.set('username', data.username, { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
-
-  return response;
+  return NextResponse.json({ success: true, user: data });
 }
