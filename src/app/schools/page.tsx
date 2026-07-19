@@ -833,39 +833,82 @@ export default function SchoolsDataPage() {
                 </div>
               </div>
               
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                <button 
-                  onClick={() => setEditingStaff(null)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={async () => {
-                    setIsSaving(true);
-                    try {
-                        const { error } = await supabase.from('hrmis_staff').update({
-                            teacher_name: editingStaff.teacher_name,
-                            designation: editingStaff.designation,
-                            bps: editingStaff.bps
-                        }).eq('id', editingStaff.id);
-                        if (error) throw error;
-                        
-                        setStaff(prev => prev.map(s => s.id === editingStaff.id ? editingStaff : s));
-                        setEditingStaff(null);
-                    } catch (err) {
-                        alert("Failed to save changes. Make sure you have the right permissions.");
-                        console.error(err);
-                    } finally {
-                        setIsSaving(false);
-                    }
-                  }}
-                  disabled={isSaving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </button>
+              <div className="pt-4 border-t border-slate-100">
+                <label className="block text-sm font-bold text-indigo-700 mb-1">Transfer to New School (EMIS Code)</label>
+                <p className="text-xs text-slate-500 mb-2">Change the EMIS code to transfer this teacher to a different school.</p>
+                <input 
+                  type="text" 
+                  value={editingStaff.emis_code || ''} 
+                  onChange={(e) => setEditingStaff({...editingStaff, emis_code: e.target.value})}
+                  className="w-full px-3 py-2 border border-indigo-200 bg-indigo-50 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-indigo-900 font-mono font-bold"
+                />
               </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <label className="flex items-center gap-3 p-3 border border-rose-200 bg-rose-50 rounded-xl cursor-pointer hover:bg-rose-100 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={editingStaff.is_retired || false}
+                    onChange={(e) => setEditingStaff({...editingStaff, is_retired: e.target.checked})}
+                    className="w-5 h-5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                  />
+                  <div>
+                    <div className="text-sm font-bold text-rose-900">Mark as Retired</div>
+                    <div className="text-xs text-rose-700">This will move the teacher to the Retired Staff view.</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <button 
+                onClick={() => setEditingStaff(null)}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors"
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                  setIsSaving(true);
+                  const { error } = await supabase.from('staff').update({
+                    teacher_name: editingStaff.teacher_name,
+                    designation: editingStaff.designation,
+                    bps: editingStaff.bps,
+                    emis_code: editingStaff.emis_code,
+                    is_retired: editingStaff.is_retired || false
+                  }).eq('id', editingStaff.id);
+                  
+                  if (error) {
+                    alert('Error saving data: ' + error.message);
+                  } else {
+                    // Update local state to reflect change instantly
+                    setStaff(prev => prev.map(s => {
+                        if (s.id === editingStaff.id) {
+                            // Update school reference if EMIS changed
+                            const newSchool = schools.find(sch => String(sch.emis_code) === String(editingStaff.emis_code));
+                            return {
+                                ...editingStaff,
+                                schools: newSchool ? { 
+                                    school_name: newSchool.school_name, 
+                                    markaz: newSchool.markaz,
+                                    school_type: newSchool.school_type,
+                                    level: newSchool.level,
+                                    gender: newSchool.gender
+                                } : null
+                            };
+                        }
+                        return s;
+                    }));
+                    setEditingStaff(null);
+                  }
+                  setIsSaving(false);
+                }}
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2"
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
           </div>
         </div>

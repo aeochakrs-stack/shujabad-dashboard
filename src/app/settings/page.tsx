@@ -1,12 +1,53 @@
 'use client';
 
-import { useState } from 'react';
-import { Settings, Shield, Database, Layout, Save, Server, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, Shield, Database, Layout, Save, Server, FileText, Users, UserCog } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  
+  const [role, setRole] = useState('aeo');
+  
+  // User Management State
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    const match = document.cookie.match(new RegExp('(^| )user_role=([^;]+)'));
+    if (match) setRole(match[2]);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users' && (role === 'admin' || role === 'developer')) {
+        fetchUsers();
+    }
+  }, [activeTab, role]);
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    if (!error && data) {
+        setUsers(data);
+    }
+    setLoadingUsers(false);
+  };
+
+  const updateUserRole = async (userId: string, newRole: string) => {
+    const { error } = await supabase.from('users').update({ role: newRole }).eq('id', userId);
+    if (error) {
+        alert("Failed to update role: " + error.message);
+    } else {
+        setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    }
+  };
 
   const handleSave = () => {
     setLoading(true);
@@ -49,13 +90,30 @@ CREATE TABLE IF NOT EXISTS public.sti_teachers (
   designation text not null,
   joining_date date
 );
+
+-- Data Collection Schema
+CREATE TABLE IF NOT EXISTS public.custom_sheets (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text,
+  columns jsonb not null default '[]'::jsonb,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+CREATE TABLE IF NOT EXISTS public.custom_sheet_data (
+  id uuid default gen_random_uuid() primary key,
+  sheet_id uuid references public.custom_sheets(id) on delete cascade not null,
+  submitted_by_username text not null,
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
 `;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">Manage your account, display preferences, and database.</p>
+        <p className="text-slate-500 mt-1">Manage your account, display preferences, and platform configuration.</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row min-h-[600px]">
@@ -68,18 +126,31 @@ CREATE TABLE IF NOT EXISTS public.sti_teachers (
           >
             <Layout className="w-5 h-5" /> General & Display
           </button>
+          
+          {(role === 'admin' || role === 'developer') && (
+            <button 
+              onClick={() => setActiveTab('users')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors text-sm whitespace-nowrap ${activeTab === 'users' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
+            >
+              <Users className="w-5 h-5" /> User Management
+            </button>
+          )}
+
           <button 
             onClick={() => setActiveTab('security')}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors text-sm whitespace-nowrap ${activeTab === 'security' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             <Shield className="w-5 h-5" /> Security
           </button>
-          <button 
-            onClick={() => setActiveTab('database')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors text-sm whitespace-nowrap ${activeTab === 'database' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
-          >
-            <Database className="w-5 h-5" /> Database Setup
-          </button>
+
+          {role === 'developer' && (
+            <button 
+              onClick={() => setActiveTab('database')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors text-sm whitespace-nowrap ${activeTab === 'database' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
+            >
+              <Database className="w-5 h-5" /> Database Setup
+            </button>
+          )}
         </div>
 
         {/* Content Area */}
@@ -124,6 +195,72 @@ CREATE TABLE IF NOT EXISTS public.sti_teachers (
             </div>
           )}
 
+          {/* User Management (Admin & Developer Only) */}
+          {activeTab === 'users' && (role === 'admin' || role === 'developer') && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-3">
+                  <UserCog className="w-6 h-6 text-indigo-600" />
+                  <h2 className="text-xl font-bold text-slate-900">User Management</h2>
+                </div>
+              </div>
+              
+              <p className="text-slate-500 text-sm">
+                View all registered accounts and promote AEOs to Admin status.
+              </p>
+
+              {loadingUsers ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-6 h-6 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-sm">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                      <tr>
+                        <th className="px-6 py-3 font-semibold">Username</th>
+                        <th className="px-6 py-3 font-semibold">Current Role</th>
+                        <th className="px-6 py-3 font-semibold">Registered</th>
+                        <th className="px-6 py-3 font-semibold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {users.map(u => (
+                        <tr key={u.id}>
+                          <td className="px-6 py-4 font-bold text-slate-800">{u.username}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                                u.role === 'developer' ? 'bg-purple-100 text-purple-700' :
+                                u.role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
+                                'bg-slate-100 text-slate-600'
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
+                          <td className="px-6 py-4">
+                            {u.role === 'developer' ? (
+                                <span className="text-xs text-slate-400">Locked</span>
+                            ) : (
+                                <select
+                                    value={u.role}
+                                    onChange={(e) => updateUserRole(u.id, e.target.value)}
+                                    className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg px-2 py-1 outline-none focus:border-indigo-500 hover:border-indigo-300 cursor-pointer"
+                                >
+                                    <option value="aeo">AEO</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Security */}
           {activeTab === 'security' && (
             <div className="space-y-8 animate-in fade-in">
@@ -152,8 +289,8 @@ CREATE TABLE IF NOT EXISTS public.sti_teachers (
             </div>
           )}
 
-          {/* Database Setup */}
-          {activeTab === 'database' && (
+          {/* Database Setup (Developer Only) */}
+          {activeTab === 'database' && role === 'developer' && (
             <div className="space-y-6 animate-in fade-in">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-2">
                 <Server className="w-6 h-6 text-indigo-600" />
@@ -161,8 +298,8 @@ CREATE TABLE IF NOT EXISTS public.sti_teachers (
               </div>
               
               <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-sm text-amber-800">
-                <strong className="block mb-1 font-bold text-amber-900">Is your dashboard empty?</strong>
-                If your Supabase database is missing tables, the dashboard will show 0 data or loading errors. Run the SQL script below in your Supabase SQL Editor to create all necessary tables instantly.
+                <strong className="block mb-1 font-bold text-amber-900">Developer Eyes Only</strong>
+                Run the SQL script below in your Supabase SQL Editor to initialize or reset tables.
               </div>
 
               <div className="space-y-3">
@@ -184,7 +321,7 @@ CREATE TABLE IF NOT EXISTS public.sti_teachers (
 
               <div className="pt-4 border-t border-slate-100">
                 <label className="block text-sm font-bold text-slate-700 mb-2">2. Seed Database</label>
-                <p className="text-sm text-slate-500 mb-4">After running the SQL script above, click this button to populate the tables with sample data (Schools, AEO accounts, and STI data).</p>
+                <p className="text-sm text-slate-500 mb-4">After running the SQL script above, click this button to populate the tables with sample data.</p>
                 <button 
                   onClick={() => alert("Sample data seeded! (Note: Connect your real Supabase keys to perform actual seeding)")}
                   className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 transition-colors shadow-sm shadow-emerald-200"

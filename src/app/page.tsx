@@ -122,7 +122,7 @@ export default async function Home() {
         <Link href="/aeos" className="bg-sky-50 hover:bg-sky-100 border border-sky-200 transition-colors rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer shadow-sm">
            <UserCheck className="w-6 h-6 text-sky-600 mb-2" />
            <span className="text-xl font-black text-sky-900">12</span>
-           <span className="text-xs font-bold text-sky-700 uppercase tracking-wider">AEOs</span>
+           <span className="text-xs font-bold text-sky-700 uppercase tracking-wider text-center px-2">Assistant Education Officers</span>
         </Link>
         <Link href="/schools" className="bg-indigo-600 hover:bg-indigo-700 border border-indigo-700 transition-colors rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer shadow-sm shadow-indigo-200 col-span-2 md:col-span-1">
            <Users className="w-6 h-6 text-white mb-2" />
