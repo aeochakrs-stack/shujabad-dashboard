@@ -163,6 +163,14 @@ export default function SchoolsDataPage() {
       }
     }
 
+    if (key === 'solar_meter_reference') {
+      return (
+        <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md whitespace-nowrap">
+          ☀️ {String(value)}
+        </span>
+      );
+    }
+
     return String(value);
   };
 
@@ -278,7 +286,7 @@ export default function SchoolsDataPage() {
     } else {
         result = result.filter(s => {
           const rowString = [
-              s.school_name, s.emis_code, s.markaz, s.school_type, s.level,
+              s.school_name, s.emis_code, s.markaz, s.school_type, s.level, s.solar_meter_reference,
               JSON.stringify(s.census_json || {})
           ].join(' ').toLowerCase();
           return matchesSearch(rowString, searchQuery);
