@@ -154,6 +154,16 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
       });
   }, [schoolData, staff]);
 
+  const displayTotals = useMemo(() => {
+    let s = 0, f = 0, v = 0;
+    displayPosts.forEach((p: any) => {
+      s += (p.sanctioned || 0);
+      f += (p.filled || 0);
+      v += (p.vacant || 0);
+    });
+    return { sanctioned: s, filled: f, vacant: v };
+  }, [displayPosts]);
+
   if (loading) return <div className="p-10 text-center text-slate-500">Loading data...</div>;
 
   return (
@@ -254,9 +264,9 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
                     <div><span className="text-xs text-slate-500 block">PSRP Phase</span><span className="font-medium text-slate-700">{schoolData?.psrp_phase || '-'}</span></div>
                     {schoolData?.school_type !== 'PRIVATE' && (
                       <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-200">
-                        <div><span className="text-[10px] text-slate-500 block uppercase">Sanctioned</span><span className="font-bold text-indigo-600">{schoolData?.total_sanctioned || 0}</span></div>
-                        <div><span className="text-[10px] text-slate-500 block uppercase">Filled</span><span className="font-bold text-emerald-600">{schoolData?.total_filled || 0}</span></div>
-                        <div><span className="text-[10px] text-slate-500 block uppercase">Vacant</span><span className="font-bold text-red-600">{schoolData?.total_vacant || 0}</span></div>
+                        <div><span className="text-[10px] text-slate-500 block uppercase">Sanctioned</span><span className="font-bold text-indigo-600">{displayTotals.sanctioned}</span></div>
+                        <div><span className="text-[10px] text-slate-500 block uppercase">Filled</span><span className="font-bold text-emerald-600">{displayTotals.filled}</span></div>
+                        <div><span className="text-[10px] text-slate-500 block uppercase">Vacant</span><span className="font-bold text-red-600">{displayTotals.vacant}</span></div>
                       </div>
                     )}
                   </div>
