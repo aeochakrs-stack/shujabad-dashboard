@@ -90,7 +90,7 @@ export default function Sidebar() {
             </Link>
           ))}
         </nav>
-        <div className="p-4 border-t border-slate-100 space-y-1 shrink-0">
+        <div className="p-4 pb-12 md:pb-4 border-t border-slate-100 space-y-1 shrink-0">
           <Link href="/settings"
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-colors ${isActive('/settings') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
           >
