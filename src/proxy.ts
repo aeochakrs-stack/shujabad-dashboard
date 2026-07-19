@@ -5,13 +5,16 @@ const PUBLIC_PATHS = ['/login'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
+
   const authSession = request.cookies.get('auth_session')?.value;
   if (!authSession) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
+
   return NextResponse.next();
 }
 
