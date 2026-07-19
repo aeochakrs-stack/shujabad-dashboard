@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -10,11 +12,18 @@ export const metadata: Metadata = {
   description: "Manage, compile, and export education data across Shujabad.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const authSession = cookieStore.get('auth_session')?.value;
+
+  if (!authSession) {
+    redirect('/login');
+  }
+
   return (
     <html lang="en">
       <body className={`${inter.className} bg-slate-50 text-slate-900`}>
