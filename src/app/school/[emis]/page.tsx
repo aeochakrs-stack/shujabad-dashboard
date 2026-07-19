@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { ArrowLeft, Users, Building, X, Zap, Hash, MapPin, BookOpen } from "lucide-react";
