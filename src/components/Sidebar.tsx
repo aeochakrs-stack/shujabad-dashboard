@@ -27,9 +27,8 @@ export default function Sidebar() {
     return pathname.startsWith(href);
   };
 
-  const handleLogout = () => {
-    document.cookie = 'auth_session=; path=/; max-age=0';
-    document.cookie = 'user_role=; path=/; max-age=0';
+   const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
   };
 
