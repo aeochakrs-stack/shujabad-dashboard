@@ -299,6 +299,7 @@ CREATE TABLE IF NOT EXISTS public.custom_sheet_data (
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
                       <tr>
                         <th className="px-6 py-3 font-semibold">Username</th>
+                        <th className="px-6 py-3 font-semibold">Password</th>
                         <th className="px-6 py-3 font-semibold">Current Role</th>
                         <th className="px-6 py-3 font-semibold">Registered</th>
                         <th className="px-6 py-3 font-semibold">Action</th>
@@ -308,6 +309,7 @@ CREATE TABLE IF NOT EXISTS public.custom_sheet_data (
                       {users.map(u => (
                         <tr key={u.id}>
                           <td className="px-6 py-4 font-bold text-slate-800">{u.username}</td>
+                          <td className="px-6 py-4 font-mono text-sm text-slate-600 bg-slate-50 border border-slate-100 rounded my-3">{u.password_hash}</td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
                                 u.role === 'developer' ? 'bg-purple-100 text-purple-700' :
