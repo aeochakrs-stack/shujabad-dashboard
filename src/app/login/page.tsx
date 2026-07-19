@@ -2,14 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-
-// Note: In a real app, this should be done via a secure server API with hashed passwords.
-// For this quick prototype, we are querying directly to keep it simple and get it working today.
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -24,23 +16,21 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("username", username)
-        .eq("password_hash", password) // We're using raw passwords for this prototype based on user's input
-        .single();
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
 
-      if (error || !data) {
-        setError("Invalid username or password");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Invalid username or password");
         setLoading(false);
         return;
       }
 
-      // Securely set a cookie to remember the user
-      document.cookie = `auth_session=${data.id}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `user_role=${data.role}; path=/; max-age=86400; SameSite=Lax`;
-      
+      // Cookie is set server-side by the API — just navigate
       router.push("/");
       router.refresh();
     } catch (err) {
