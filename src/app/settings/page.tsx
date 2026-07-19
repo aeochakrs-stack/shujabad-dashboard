@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Shield, Database, Layout, Save, Server, FileText, Users, UserCog, X } from 'lucide-react';
+import { Settings, Shield, Database, Layout, Save, Server, FileText, Users, UserCog, X, Trash2 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -57,6 +57,22 @@ export default function SettingsPage() {
         alert("Failed to update role: " + error.message);
     } else {
         setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (!confirm(`Are you sure you want to completely delete the account for ${username}? This cannot be undone.`)) return;
+    
+    try {
+        const res = await fetch(`/api/auth/delete-user?id=${userId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+            setUsers(users.filter(u => u.id !== userId));
+        } else {
+            alert(data.error || 'Failed to delete user');
+        }
+    } catch (err) {
+        alert('An unexpected error occurred while deleting the user.');
     }
   };
 
@@ -324,14 +340,23 @@ CREATE TABLE IF NOT EXISTS public.custom_sheet_data (
                             {u.role === 'developer' ? (
                                 <span className="text-xs text-slate-400">Locked</span>
                             ) : (
-                                <select
-                                    value={u.role}
-                                    onChange={(e) => updateUserRole(u.id, e.target.value)}
-                                    className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg px-2 py-1 outline-none focus:border-indigo-500 hover:border-indigo-300 cursor-pointer"
-                                >
-                                    <option value="aeo">AEO</option>
-                                    <option value="admin">Admin</option>
-                                </select>
+                                <div className="flex items-center gap-2">
+                                  <select
+                                      value={u.role}
+                                      onChange={(e) => updateUserRole(u.id, e.target.value)}
+                                      className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg px-2 py-1 outline-none focus:border-indigo-500 hover:border-indigo-300 cursor-pointer"
+                                  >
+                                      <option value="aeo">AEO</option>
+                                      <option value="admin">Admin</option>
+                                  </select>
+                                  <button 
+                                    onClick={() => handleDeleteUser(u.id, u.username)}
+                                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Delete User"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                             )}
                           </td>
                         </tr>
