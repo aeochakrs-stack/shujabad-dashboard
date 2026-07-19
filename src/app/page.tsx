@@ -11,8 +11,7 @@ export default async function Home() {
   const { data: stiData, error: stiError } = await supabase.from('sti_teachers').select('id');
 
   if (error) {
-    console.error("Error fetching schools:", error);
-    return <div className="p-8 text-red-500">Failed to load data</div>;
+    console.warn("Error fetching schools (tables might be missing):", error.message);
   }
 
   const schools = (schoolsData || []) as any[];

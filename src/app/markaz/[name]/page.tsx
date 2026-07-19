@@ -31,8 +31,7 @@ export default async function MarkazPage({ params, searchParams }: { params: Pro
   }
 
   if (error) {
-    console.error("Error fetching schools:", error);
-    return <div className="p-8 text-red-500">Failed to load markaz data</div>;
+    console.warn("Error fetching markaz data (tables might be missing):", error.message);
   }
 
   const schools = (schoolsData || []) as any[];

@@ -12,9 +12,11 @@ export default async function CategoryPage({ params }: { params: Promise<{ type:
   
   if (categoryType === 'STI') {
     const { data: stis, error } = await supabase.from('sti_teachers').select('*').order('markaz', { ascending: true });
-    if (error) return <div className="p-8 text-red-500">Failed to load STI data</div>;
+    
+    if (error) {
+      console.warn("Could not load STI data (table might be missing):", error.message);
+    }
     const safeStis = stis || [];
-
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -80,8 +82,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ type:
   }
 
   if (error) {
-    console.error("Error fetching category:", error);
-    return <div className="p-8 text-red-500">Failed to load data</div>;
+    console.warn("Error fetching category (tables might be missing):", error.message);
   }
 
   const schools = (schoolsData || []) as any[];

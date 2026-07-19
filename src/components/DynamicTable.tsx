@@ -17,12 +17,20 @@ export interface DynamicTableProps {
 export default function DynamicTable({ data, columns, defaultVisibleColumns, exportFileName, searchPlaceholder = "Search data..." }: DynamicTableProps) {
   const [search, setSearch] = useState('');
   const [visibleCols, setVisibleCols] = useState<string[]>(defaultVisibleColumns);
+  const [selectedMarkaz, setSelectedMarkaz] = useState<string>('All');
+
+  const hasMarkazColumn = columns.some(c => c.key === 'markaz');
+  const uniqueMarkazs = hasMarkazColumn 
+    ? Array.from(new Set(data.map(d => d.markaz).filter(Boolean))).sort()
+    : [];
 
   const toggleCol = (key: string) => {
     setVisibleCols(prev => prev.includes(key) ? prev.filter(c => c !== key) : [...prev, key]);
   };
 
   const filteredData = data.filter(item => {
+    if (selectedMarkaz !== 'All' && item.markaz !== selectedMarkaz) return false;
+    
     if (!search) return true;
     const searchLower = search.toLowerCase();
     // Search across all string/number fields
@@ -107,16 +115,31 @@ export default function DynamicTable({ data, columns, defaultVisibleColumns, exp
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
       
       {/* Controls Header */}
-      <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
-        <div className="relative max-w-md w-full shrink-0">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder={searchPlaceholder} 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-          />
+      <div className="p-4 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-50/50">
+        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto shrink-0">
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder={searchPlaceholder} 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+            />
+          </div>
+          
+          {hasMarkazColumn && uniqueMarkazs.length > 0 && (
+            <select
+              value={selectedMarkaz}
+              onChange={(e) => setSelectedMarkaz(e.target.value)}
+              className="w-full sm:w-48 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white font-medium text-slate-700"
+            >
+              <option value="All">All Markazs</option>
+              {uniqueMarkazs.map((m: any) => (
+                <option key={String(m)} value={String(m)}>{String(m)}</option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Columns:</span>
