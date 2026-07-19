@@ -56,7 +56,38 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
 
       setStaff(staffRes.data || []);
       
-      const school = schoolRes.data;
+      let school = schoolRes.data;
+      
+      if (school) {
+          if (!school.level && school.school_name) {
+              const name = school.school_name.toUpperCase();
+              if (name.includes(' GGHS ') || name.includes(' GHS ') || name.startsWith('GGHS ') || name.startsWith('GHS ')) school.level = 'High';
+              else if (name.includes(' GGHSS ') || name.includes(' GHSS ') || name.startsWith('GGHSS ') || name.startsWith('GHSS ')) school.level = 'Higher Secondary';
+              else if (name.includes(' GGES ') || name.includes(' GES ') || name.startsWith('GGES ') || name.startsWith('GES ')) school.level = 'Middle';
+              else if (name.includes(' GGPS ') || name.includes(' GPS ') || name.includes(' GMPS ') || name.startsWith('GGPS ') || name.startsWith('GPS ') || name.startsWith('GMPS ')) school.level = 'Primary';
+              else if (name.includes(' MC ') || name.startsWith('MC ')) school.level = 'Primary';
+          }
+          if (!school.gender && school.school_name) {
+              const name = school.school_name.toUpperCase();
+              if (name.includes(' GG')) school.gender = 'Girls';
+              else if (name.includes(' GHS') || name.includes(' GPS') || name.includes(' GES') || name.includes(' MC ')) school.gender = 'Boys';
+          }
+          
+          let total_sanctioned = 0;
+          let total_filled = 0;
+          let total_vacant = 0;
+          if (school.sanctioned_posts && Array.isArray(school.sanctioned_posts)) {
+              school.sanctioned_posts.forEach((p: any) => {
+                  total_sanctioned += (p.sanctioned || 0);
+                  total_filled += (p.filled || 0);
+                  total_vacant += (p.vacant || 0);
+              });
+          }
+          school.total_sanctioned = total_sanctioned;
+          school.total_filled = total_filled;
+          school.total_vacant = total_vacant;
+      }
+      
       setSchoolData(school);
       
       if (school && school.census_json) {
@@ -98,6 +129,30 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
     if (filters.retirement && !(s.retirement_date || '').includes(filters.retirement)) return false;
     return true;
   });
+
+  const displayPosts = useMemo(() => {
+      if (schoolData?.sanctioned_posts && Array.isArray(schoolData.sanctioned_posts) && schoolData.sanctioned_posts.length > 0) {
+          return schoolData.sanctioned_posts;
+      }
+      
+      // Fallback: calculate from staff list
+      if (!staff || staff.length === 0) return [];
+      const groups: Record<string, any> = {};
+      staff.forEach(s => {
+         if (s.is_retired) return;
+         const bps = s.bps ? String(s.bps) : 'N/A';
+         const desig = s.designation || 'Unknown';
+         const key = `${bps}-${desig}`;
+         if (!groups[key]) groups[key] = { bps, designation: desig, sanctioned: 0, filled: 0, vacant: 0 };
+         groups[key].filled++;
+         groups[key].sanctioned++; // Assumed 1:1 if we only have filled data
+      });
+      return Object.values(groups).sort((a: any, b: any) => {
+          if (a.bps === 'N/A') return 1;
+          if (b.bps === 'N/A') return -1;
+          return Number(b.bps) - Number(a.bps);
+      });
+  }, [schoolData, staff]);
 
   if (loading) return <div className="p-10 text-center text-slate-500">Loading data...</div>;
 
@@ -198,11 +253,49 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
                     <div><span className="text-xs text-slate-500 block">Total Enrollment</span><span className="font-bold text-amber-600 text-lg">{schoolData?.enrollment_total || 0}</span></div>
                     <div><span className="text-xs text-slate-500 block">PSRP Phase</span><span className="font-medium text-slate-700">{schoolData?.psrp_phase || '-'}</span></div>
                     {schoolData?.school_type !== 'PRIVATE' && (
-                      <div><span className="text-xs text-slate-500 block">Sanctioned Posts</span><span className="font-medium text-slate-700">{schoolData?.sanctioned_posts || 0}</span></div>
+                      <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-200">
+                        <div><span className="text-[10px] text-slate-500 block uppercase">Sanctioned</span><span className="font-bold text-indigo-600">{schoolData?.total_sanctioned || 0}</span></div>
+                        <div><span className="text-[10px] text-slate-500 block uppercase">Filled</span><span className="font-bold text-emerald-600">{schoolData?.total_filled || 0}</span></div>
+                        <div><span className="text-[10px] text-slate-500 block uppercase">Vacant</span><span className="font-bold text-red-600">{schoolData?.total_vacant || 0}</span></div>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* Scale-Wise Posts Breakdown */}
+              {displayPosts.length > 0 && schoolData?.school_type !== 'PRIVATE' && (
+                <div className="mt-8 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center gap-2">
+                    <Hash className="w-5 h-5 text-indigo-500" />
+                    <h3 className="font-bold text-slate-800">Scale-Wise Posts Breakdown</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                      <thead className="bg-white border-b border-slate-100 text-slate-500">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold">Designation</th>
+                          <th className="px-4 py-3 font-semibold text-center">BPS</th>
+                          <th className="px-4 py-3 font-semibold text-center">Sanctioned</th>
+                          <th className="px-4 py-3 font-semibold text-center">Filled</th>
+                          <th className="px-4 py-3 font-semibold text-center">Vacant</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {displayPosts.map((p: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 font-medium text-slate-800">{p.designation || '-'}</td>
+                            <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-xs">{p.bps || '-'}</span></td>
+                            <td className="px-4 py-3 text-center font-bold text-indigo-600">{p.sanctioned || 0}</td>
+                            <td className="px-4 py-3 text-center font-bold text-emerald-600">{p.filled || 0}</td>
+                            <td className="px-4 py-3 text-center font-bold text-red-600">{p.vacant || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
