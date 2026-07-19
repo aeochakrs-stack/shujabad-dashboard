@@ -60,5 +60,5 @@ export const STAFF_COLUMNS: ExportColumn[] = [
     { key: 'is_dengue_focal_person', label: 'Dengue Focal Person' }
 ];
 
-export const DEFAULT_SCHOOL_COLS = ['emis_code', 'school_name', 'markaz', 'school_type', 'level', 'enrollment_current', 'total_sanctioned', 'total_filled', 'total_vacant'];
+export const DEFAULT_SCHOOL_COLS = ['emis_code', 'school_name', 'markaz', 'school_type', 'level', 'enrollment_current', 'total_sanctioned', 'total_filled', 'total_vacant', 'solar_meter_reference'];
 export const DEFAULT_STAFF_COLS = ['emis_code', 'teacher_name', 'designation', 'cnic', 'phone'];
