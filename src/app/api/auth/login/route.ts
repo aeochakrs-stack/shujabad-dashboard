@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (error || !data) {
     // --- FALLBACK ADMIN BYPASS ---
     // If the database is empty, use this to get in!
-    if (username === 'admin' && password === 'admin123') {
+    if (username === 'admin' && password === 'ShujaAdmin!@2026') {
       const response = NextResponse.json({ success: true, role: 'admin' });
       response.cookies.set('auth_session', 'fallback_admin_id', { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
       response.cookies.set('user_role', 'admin', { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     }
     
     // --- FALLBACK DEVELOPER BYPASS ---
-    if (username === 'developer' && password === 'dev123') {
+    if (username === 'developer' && password === 'ShujaDev!@2026') {
       const response = NextResponse.json({ success: true, role: 'developer' });
       response.cookies.set('auth_session', 'fallback_dev_id', { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
       response.cookies.set('user_role', 'developer', { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     }
 
     // --- FALLBACK AEO BYPASS ---
-    if (username === 'aeo_test' && password === 'aeo123') {
+    if (username === 'aeo_test' && password === 'ShujaAeo!@2026') {
       const response = NextResponse.json({ success: true, role: 'aeo' });
       response.cookies.set('auth_session', 'fallback_aeo_id', { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
       response.cookies.set('user_role', 'aeo', { path: '/', maxAge: 86400, sameSite: 'lax', httpOnly: false });
