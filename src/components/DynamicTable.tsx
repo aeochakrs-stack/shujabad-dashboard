@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Eye, EyeOff } from "lucide-react";
+import { useState, useRef, useEffect } from 'react';
+import { Search, Eye, EyeOff, ChevronDown, CheckSquare, Square } from "lucide-react";
 import Link from "next/link";
 import ExportColumnSelector, { ExportColumn } from "@/components/ExportColumnSelector";
 import * as XLSX from 'xlsx';
@@ -17,7 +17,19 @@ export interface DynamicTableProps {
 export default function DynamicTable({ data, columns, defaultVisibleColumns, exportFileName, searchPlaceholder = "Search data..." }: DynamicTableProps) {
   const [search, setSearch] = useState('');
   const [visibleCols, setVisibleCols] = useState<string[]>(defaultVisibleColumns);
-  const [selectedMarkaz, setSelectedMarkaz] = useState<string>('All');
+  const [selectedMarkazs, setSelectedMarkazs] = useState<string[]>([]);
+  const [isMarkazDropdownOpen, setIsMarkazDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsMarkazDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const hasMarkazColumn = columns.some(c => c.key === 'markaz');
   const uniqueMarkazs = hasMarkazColumn 
@@ -28,8 +40,12 @@ export default function DynamicTable({ data, columns, defaultVisibleColumns, exp
     setVisibleCols(prev => prev.includes(key) ? prev.filter(c => c !== key) : [...prev, key]);
   };
 
+  const toggleMarkaz = (m: string) => {
+    setSelectedMarkazs(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+  };
+
   const filteredData = data.filter(item => {
-    if (selectedMarkaz !== 'All' && item.markaz !== selectedMarkaz) return false;
+    if (selectedMarkazs.length > 0 && !selectedMarkazs.includes(item.markaz)) return false;
     
     if (!search) return true;
     const searchLower = search.toLowerCase();
@@ -129,16 +145,54 @@ export default function DynamicTable({ data, columns, defaultVisibleColumns, exp
           </div>
           
           {hasMarkazColumn && uniqueMarkazs.length > 0 && (
-            <select
-              value={selectedMarkaz}
-              onChange={(e) => setSelectedMarkaz(e.target.value)}
-              className="w-full sm:w-48 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white font-medium text-slate-700"
-            >
-              <option value="All">All Markazs</option>
-              {uniqueMarkazs.map((m: any) => (
-                <option key={String(m)} value={String(m)}>{String(m)}</option>
-              ))}
-            </select>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsMarkazDropdownOpen(!isMarkazDropdownOpen)}
+                className="w-full sm:w-48 px-4 py-2 border border-slate-200 rounded-xl text-sm transition-all bg-white font-medium text-slate-700 flex items-center justify-between hover:bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <span className="truncate pr-2">
+                  {selectedMarkazs.length === 0 
+                    ? 'All Markazs' 
+                    : `${selectedMarkazs.length} selected`}
+                </span>
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              </button>
+
+              {isMarkazDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-64 overflow-y-auto py-1">
+                  <div className="px-3 py-2 border-b border-slate-100 mb-1 flex justify-between items-center sticky top-0 bg-white">
+                    <span className="text-xs font-bold text-slate-500 uppercase">Filter by Markaz</span>
+                    {selectedMarkazs.length > 0 && (
+                      <button 
+                        onClick={() => setSelectedMarkazs([])}
+                        className="text-xs text-indigo-600 font-bold hover:text-indigo-800"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {uniqueMarkazs.map((m: any) => {
+                    const isSelected = selectedMarkazs.includes(String(m));
+                    return (
+                      <button
+                        key={String(m)}
+                        onClick={() => toggleMarkaz(String(m))}
+                        className="w-full px-3 py-2 text-left flex items-center gap-3 hover:bg-slate-50 transition-colors"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-4 h-4 text-indigo-600 shrink-0" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-300 shrink-0" />
+                        )}
+                        <span className={`text-sm truncate ${isSelected ? 'font-bold text-indigo-900' : 'text-slate-700'}`}>
+                          {String(m)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-3">
