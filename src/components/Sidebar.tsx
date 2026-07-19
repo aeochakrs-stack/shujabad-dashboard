@@ -99,7 +99,7 @@ export default function Sidebar() {
           </Link>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 font-medium transition-colors">
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-100 hover:text-red-700 font-bold transition-colors cursor-pointer">
             <LogOut className="w-5 h-5" />
             Log Out
           </button>
