@@ -12,8 +12,8 @@ export async function DELETE(request: Request) {
   const roleMatch = cookieHeader.match(/(?:^| )user_role=([^;]+)/);
   const role = roleMatch ? roleMatch[1] : null;
 
-  if (role !== 'admin' && role !== 'developer') {
-    return NextResponse.json({ error: 'Only Administrators can delete accounts.' }, { status: 403 });
+  if (role !== 'developer') {
+    return NextResponse.json({ error: 'Only Developers can delete accounts.' }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
