@@ -42,12 +42,12 @@ export default function Sidebar() {
     <>
       {/* Mobile Top Bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-30 flex items-center justify-between px-4 shadow-sm">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
             <span className="text-white font-bold text-lg">S</span>
           </div>
           <span className="text-xl font-bold text-slate-800 tracking-tight">Shujabad<span className="text-indigo-600">Edu</span></span>
-        </div>
+        </Link>
         <button 
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 -mr-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -67,12 +67,12 @@ export default function Sidebar() {
       {/* Sidebar */}
       <div className={`flex flex-col w-64 h-screen bg-white border-r border-slate-200 fixed top-0 left-0 z-50 shadow-sm transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="flex items-center justify-between md:justify-center h-16 md:h-20 px-4 md:px-0 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
               <span className="text-white font-bold text-lg">S</span>
             </div>
             <span className="text-xl font-bold text-slate-800 tracking-tight">Shujabad<span className="text-indigo-600">Edu</span></span>
-          </div>
+          </Link>
           <button 
             onClick={() => setIsOpen(false)}
             className="p-2 -mr-2 text-slate-600 hover:bg-slate-100 rounded-lg md:hidden"
