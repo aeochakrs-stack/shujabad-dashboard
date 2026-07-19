@@ -94,6 +94,8 @@ export default function SchoolsDataPage() {
   const [viewingStaff, setViewingStaff] = useState<any | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
+  const [rowsLimit, setRowsLimit] = useState<number | 'All'>(50);
+
   const [selectedSchoolIds, setSelectedSchoolIds] = useState<Set<string>>(new Set());
   const [selectedStaffIds, setSelectedStaffIds] = useState<Set<string>>(new Set());
 
@@ -193,7 +195,20 @@ export default function SchoolsDataPage() {
               else if (name.includes(' GGPS ') || name.includes(' GPS ') || name.includes(' GMPS ') || name.startsWith('GGPS ') || name.startsWith('GPS ') || name.startsWith('GMPS ')) detectedLevel = 'Primary';
               else if (name.includes(' MC ') || name.startsWith('MC ')) detectedLevel = 'Primary';
           }
-          return { ...sch, level: detectedLevel };
+          
+          let total_sanctioned = 0;
+          let total_filled = 0;
+          let total_vacant = 0;
+          
+          if (sch.sanctioned_posts && Array.isArray(sch.sanctioned_posts)) {
+            sch.sanctioned_posts.forEach((p: any) => {
+              total_sanctioned += (p.sanctioned || 0);
+              total_filled += (p.filled || 0);
+              total_vacant += (p.vacant || 0);
+            });
+          }
+          
+          return { ...sch, level: detectedLevel, total_sanctioned, total_filled, total_vacant };
       });
 
       const staffWithSchools = (staffRes.data || []).map(s => {
@@ -314,6 +329,9 @@ export default function SchoolsDataPage() {
       return matchesSearch(rowString, searchQuery);
     });
   }, [staff, searchQuery, filterBps, filterDesignation, filterMarkaz, filterEmis, filterSchoolType, filterSchoolLevel, filterSchoolGender, filterStatus, uniqueMarkaz.length]);
+
+  const displayedSchools = rowsLimit === 'All' ? filteredSchools : filteredSchools.slice(0, rowsLimit);
+  const displayedStaff = rowsLimit === 'All' ? filteredStaff : filteredStaff.slice(0, rowsLimit);
 
   // Row Selection logic
   const toggleSchoolSelection = (id: string) => {
@@ -442,16 +460,30 @@ export default function SchoolsDataPage() {
             <p className="text-slate-500 text-sm">Comprehensive multi-select filter engine for cross-analyzing Schools and Staff.</p>
           </div>
           
-          <div className="flex flex-col items-end gap-2">
-            <ExportColumnSelector 
-                columns={activeTab === 'schools' ? SCHOOL_COLUMNS : STAFF_COLUMNS} 
-                onExport={handleExport} 
-            />
-            {(activeTab === 'schools' ? selectedSchoolIds.size : selectedStaffIds.size) > 0 && (
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                    Will export {activeTab === 'schools' ? selectedSchoolIds.size : selectedStaffIds.size} manually selected rows
-                </span>
-            )}
+          <div className="flex flex-col items-end gap-3">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-bold text-slate-500 whitespace-nowrap">Show rows:</label>
+              <select
+                value={String(rowsLimit)}
+                onChange={(e) => setRowsLimit(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+                className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg hover:border-indigo-300 px-3 py-2 font-medium shadow-sm transition-colors focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              >
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="All">All</option>
+              </select>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <ExportColumnSelector 
+                  columns={activeTab === 'schools' ? SCHOOL_COLUMNS : STAFF_COLUMNS} 
+                  onExport={handleExport} 
+              />
+              {(activeTab === 'schools' ? selectedSchoolIds.size : selectedStaffIds.size) > 0 && (
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                      Will export {activeTab === 'schools' ? selectedSchoolIds.size : selectedStaffIds.size} manually selected rows
+                  </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -581,7 +613,7 @@ export default function SchoolsDataPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {filteredSchools.slice(0, 50).map((school) => (
+                  {displayedSchools.map((school) => (
                     <tr key={school.id} className={`transition-colors group ${selectedSchoolIds.has(school.id) ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
                       <td className="px-6 py-4">
                         <input 
@@ -600,9 +632,9 @@ export default function SchoolsDataPage() {
                   ))}
                 </tbody>
               </table>
-              {filteredSchools.length > 50 && (
+              {filteredSchools.length > (rowsLimit === 'All' ? Infinity : rowsLimit) && (
                   <div className="p-4 text-center text-xs text-slate-500 bg-slate-50 border-t border-slate-200">
-                      Showing top 50 results out of {filteredSchools.length}. Selecting "All" selects all {filteredSchools.length} rows.
+                      Showing top {rowsLimit} results out of {filteredSchools.length}. Select "All" from the top dropdown to see every row.
                   </div>
               )}
             </div>
@@ -651,7 +683,7 @@ export default function SchoolsDataPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {filteredStaff.slice(0, 50).map((s) => (
+                  {displayedStaff.map((s) => (
                     <tr key={s.id} className={`transition-colors group ${selectedStaffIds.has(s.id) ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
                       <td className="px-6 py-4">
                         <input 
@@ -685,9 +717,9 @@ export default function SchoolsDataPage() {
                 </tbody>
               </table>
             </div>
-            {filteredStaff.length > 50 && (
+            {filteredStaff.length > (rowsLimit === 'All' ? Infinity : rowsLimit) && (
                 <div className="p-4 text-center text-xs text-slate-500 bg-slate-50 border-t border-slate-200">
-                    Showing top 50 results out of {filteredStaff.length}. Selecting "All" selects all {filteredStaff.length} rows.
+                    Showing top {rowsLimit} results out of {filteredStaff.length}. Select "All" from the top dropdown to see every row.
                 </div>
             )}
           </div>
@@ -801,82 +833,39 @@ export default function SchoolsDataPage() {
                 </div>
               </div>
               
-              <div className="pt-4 border-t border-slate-100">
-                <label className="block text-sm font-bold text-indigo-700 mb-1">Transfer to New School (EMIS Code)</label>
-                <p className="text-xs text-slate-500 mb-2">Change the EMIS code to transfer this teacher to a different school.</p>
-                <input 
-                  type="text" 
-                  value={editingStaff.emis_code || ''} 
-                  onChange={(e) => setEditingStaff({...editingStaff, emis_code: e.target.value})}
-                  className="w-full px-3 py-2 border border-indigo-200 bg-indigo-50 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-indigo-900 font-mono font-bold"
-                />
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button 
+                  onClick={() => setEditingStaff(null)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={async () => {
+                    setIsSaving(true);
+                    try {
+                        const { error } = await supabase.from('hrmis_staff').update({
+                            teacher_name: editingStaff.teacher_name,
+                            designation: editingStaff.designation,
+                            bps: editingStaff.bps
+                        }).eq('id', editingStaff.id);
+                        if (error) throw error;
+                        
+                        setStaff(prev => prev.map(s => s.id === editingStaff.id ? editingStaff : s));
+                        setEditingStaff(null);
+                    } catch (err) {
+                        alert("Failed to save changes. Make sure you have the right permissions.");
+                        console.error(err);
+                    } finally {
+                        setIsSaving(false);
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
               </div>
-
-              <div className="pt-4 border-t border-slate-100">
-                <label className="flex items-center gap-3 p-3 border border-rose-200 bg-rose-50 rounded-xl cursor-pointer hover:bg-rose-100 transition-colors">
-                  <input 
-                    type="checkbox" 
-                    checked={editingStaff.is_retired || false}
-                    onChange={(e) => setEditingStaff({...editingStaff, is_retired: e.target.checked})}
-                    className="w-5 h-5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
-                  />
-                  <div>
-                    <div className="text-sm font-bold text-rose-900">Mark as Retired</div>
-                    <div className="text-xs text-rose-700">This will move the teacher to the Retired Staff view.</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-              <button 
-                onClick={() => setEditingStaff(null)}
-                className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors"
-                disabled={isSaving}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={async () => {
-                  setIsSaving(true);
-                  const { error } = await supabase.from('staff').update({
-                    teacher_name: editingStaff.teacher_name,
-                    designation: editingStaff.designation,
-                    bps: editingStaff.bps,
-                    emis_code: editingStaff.emis_code,
-                    is_retired: editingStaff.is_retired || false
-                  }).eq('id', editingStaff.id);
-                  
-                  if (error) {
-                    alert('Error saving data: ' + error.message);
-                  } else {
-                    // Update local state to reflect change instantly
-                    setStaff(prev => prev.map(s => {
-                        if (s.id === editingStaff.id) {
-                            // Update school reference if EMIS changed
-                            const newSchool = schools.find(sch => String(sch.emis_code) === String(editingStaff.emis_code));
-                            return {
-                                ...editingStaff,
-                                schools: newSchool ? { 
-                                    school_name: newSchool.school_name, 
-                                    markaz: newSchool.markaz,
-                                    school_type: newSchool.school_type,
-                                    level: newSchool.level,
-                                    gender: newSchool.gender
-                                } : null
-                            };
-                        }
-                        return s;
-                    }));
-                    setEditingStaff(null);
-                  }
-                  setIsSaving(false);
-                }}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2"
-                disabled={isSaving}
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
             </div>
           </div>
         </div>
