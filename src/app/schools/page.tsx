@@ -273,13 +273,36 @@ export default function SchoolsDataPage() {
     if (filterSchoolLevel.size > 0) result = result.filter(s => filterSchoolLevel.has(s.level));
     if (filterSchoolGender.size > 0) result = result.filter(s => filterSchoolGender.has(s.gender));
 
-    if (!searchQuery) return result;
-    return result.filter(s => {
-      const rowString = [
-          s.school_name, s.emis_code, s.markaz, s.school_type, s.level,
-          JSON.stringify(s.census_json || {})
-      ].join(' ').toLowerCase();
-      return matchesSearch(rowString, searchQuery);
+    if (!searchQuery) {
+        // No search, just sort
+    } else {
+        result = result.filter(s => {
+          const rowString = [
+              s.school_name, s.emis_code, s.markaz, s.school_type, s.level,
+              JSON.stringify(s.census_json || {})
+          ].join(' ').toLowerCase();
+          return matchesSearch(rowString, searchQuery);
+        });
+    }
+
+    // Global Sorting Logic
+    return result.sort((a, b) => {
+        const getRank = (type: string | undefined | null) => {
+            if (!type) return 99;
+            const t = type.toUpperCase();
+            if (t.includes('PHASE 3')) return 2; // Phase 3 right after SED
+            if (t.includes('SED')) return 1;
+            if (t.includes('PHASE 1')) return 3;
+            if (t.includes('PHASE 2')) return 4;
+            if (t.includes('PEIMA')) return 5;
+            return 6; // PRIVATE or anything else
+        };
+        const rankA = getRank(a.school_type);
+        const rankB = getRank(b.school_type);
+        if (rankA !== rankB) return rankA - rankB;
+        
+        // If they are in the same category, sort alphabetically by school name
+        return (a.school_name || '').localeCompare(b.school_name || '');
     });
   }, [schools, searchQuery, filterMarkaz, filterEmis, filterSchoolType, filterSchoolLevel, filterSchoolGender]);
 
