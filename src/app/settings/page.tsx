@@ -20,6 +20,13 @@ export default function SettingsPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // Security State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [secError, setSecError] = useState('');
+
+
   useEffect(() => {
     const match = document.cookie.match(new RegExp('(^| )user_role=([^;]+)'));
     if (match) setRole(match[2]);
@@ -108,6 +115,41 @@ CREATE TABLE IF NOT EXISTS public.custom_sheet_data (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 `;
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecError('');
+    setSuccessMsg('');
+    
+    if (newPassword !== confirmPassword) {
+        setSecError('New passwords do not match');
+        return;
+    }
+
+    setLoading(true);
+    try {
+        const res = await fetch('/api/auth/update-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            setSuccessMsg('Password updated successfully!');
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } else {
+            setSecError(data.error || 'Failed to update password');
+        }
+    } catch (err) {
+        setSecError('An unexpected error occurred');
+    } finally {
+        setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -266,21 +308,27 @@ CREATE TABLE IF NOT EXISTS public.custom_sheet_data (
             <div className="space-y-8 animate-in fade-in">
               <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-2">Security</h2>
               
-              <form className="space-y-4 max-w-md" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+              <form className="space-y-4 max-w-md" onSubmit={handlePasswordUpdate}>
+                {secError && (
+                    <div className="p-3 bg-red-50 text-red-700 text-sm font-medium rounded-xl border border-red-200">
+                        {secError}
+                    </div>
+                )}
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">Current Password</label>
-                  <input type="password" required className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">New Password</label>
-                  <input type="password" required className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">Confirm New Password</label>
-                  <input type="password" required className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
                 <div className="pt-4">
-                  <button type="submit" disabled={loading} className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors">
+                  <button type="submit" disabled={loading} className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2">
+                    {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />}
                     Update Password
                   </button>
                   {successMsg && <p className="mt-3 text-sm font-bold text-emerald-600">{successMsg}</p>}
@@ -323,7 +371,10 @@ CREATE TABLE IF NOT EXISTS public.custom_sheet_data (
                 <label className="block text-sm font-bold text-slate-700 mb-2">2. Seed Database</label>
                 <p className="text-sm text-slate-500 mb-4">After running the SQL script above, click this button to populate the tables with sample data.</p>
                 <button 
-                  onClick={() => alert("Sample data seeded! (Note: Connect your real Supabase keys to perform actual seeding)")}
+                  onClick={() => {
+      setSuccessMsg('Sample data seeded! (Note: Connect your real Supabase keys to perform actual seeding)');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    }}
                   className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 transition-colors shadow-sm shadow-emerald-200"
                 >
                   <Database className="w-5 h-5" /> Seed Sample Data
