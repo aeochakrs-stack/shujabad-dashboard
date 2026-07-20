@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { UploadCloud, FileSpreadsheet, Calculator, Save, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -210,30 +212,67 @@ export default function BudgetPage() {
     return rb;
   }, [budgetData]);
 
-  const exportRevisedBudget = () => {
-    const exportData = budgetData.map(row => {
+  const exportRevisedBudget = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Revised Budget');
+
+    // Headers
+    worksheet.columns = [
+        { header: 'Object Code', key: 'obj', width: 12 },
+        { header: 'Designation', key: 'desig', width: 45 },
+        { header: 'Scale/BS', key: 'bps', width: 10 },
+        { header: 'Sanctioned (24-25)', key: 's24', width: 18 },
+        { header: 'Sanctioned (25-26)', key: 's25', width: 18 },
+        { header: 'Annual Budget (24-25)', key: 'b24', width: 22 },
+        { header: 'Revised Budget (24-25)', key: 'rev24', width: 22 },
+        { header: 'Original Estimate (25-26)', key: 'prop25', width: 25 },
+        { header: 'Abolished Seats', key: 'abol', width: 18 },
+        { header: 'Revised Sanctioned', key: 'revs', width: 20 },
+        { header: 'Revised Estimate', key: 'revb', width: 25 }
+    ];
+
+    // Style the header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).alignment = { horizontal: 'center' };
+
+    budgetData.forEach((row) => {
         const revisedSanctioned = Math.max(0, (row.sanctioned_25_26 || 0) - (row.abolished_seats || 0));
         const revisedBudget = revisedBudgetsMap[row.id] || 0;
 
-        return {
-            "Object Code": row.object_code,
-            "Designation": row.designation,
-            "Scale/BS": row.bps,
-            "Original Sanctioned (24-25)": row.sanctioned_24_25,
-            "Original Sanctioned (25-26)": row.sanctioned_25_26,
-            "Annual Budget (24-25)": row.budget_24_25,
-            "Revised Budget (24-25)": row.revised_budget_24_25,
-            "Abolished Seats": row.abolished_seats,
-            "Revised Sanctioned (25-26)": revisedSanctioned,
-            "Original Budget Estimate": row.proposed_estimate_25_26,
-            "Revised Budget Estimate": revisedBudget
-        };
+        // Determine if row should be bold
+        const boldKeywords = ["A01", "A011", "A012", "A039", "GRAND TOTAL", "Salary", "Non-Salary", "Total", "TOTAL"];
+        const isBoldTotal = boldKeywords.some(str => 
+            row.designation.toUpperCase().includes(str) || row.object_code === str
+        ) || !row.bps;
+
+        // Add blank row if it's a major section start to recreate PDF gaps
+        const addBlankBefore = ["A012", "A012-2", "A039", "A04", "A05"].includes(row.object_code) || row.designation === "GRAND TOTAL";
+        if (addBlankBefore) {
+            worksheet.addRow({});
+        }
+
+        const excelRow = worksheet.addRow({
+            obj: row.object_code || "",
+            desig: row.designation || "",
+            bps: row.bps || "", // Leaves cell completely empty if no BPS
+            s24: row.sanctioned_24_25 || "",
+            s25: row.sanctioned_25_26 || "",
+            b24: row.budget_24_25 || "",
+            rev24: row.revised_budget_24_25 || "",
+            prop25: row.proposed_estimate_25_26 || "",
+            abol: row.abolished_seats || "",
+            revs: row.sanctioned_25_26 > 0 ? revisedSanctioned : "",
+            revb: revisedBudget || ""
+        });
+
+        // Apply bold styling
+        if (isBoldTotal) {
+            excelRow.font = { bold: true };
+        }
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Revised Budget");
-    XLSX.writeFile(workbook, `Revised_Budget_25_26.xlsx`);
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), 'Revised_Budget_25_26.xlsx');
   };
 
   return (
