@@ -5,8 +5,9 @@ import SyncEnrollmentButton from "@/components/SyncEnrollmentButton";
 
 export const revalidate = 0;
 
-export default async function EnrollmentClassPage({ params }: { params: { emis: string } }) {
-  const emisCode = params.emis;
+export default async function EnrollmentClassPage({ params }: { params: Promise<{ emis: string }> }) {
+  const resolvedParams = await params;
+  const emisCode = resolvedParams.emis;
   
   const { data, error } = await supabase
     .from('schools')
