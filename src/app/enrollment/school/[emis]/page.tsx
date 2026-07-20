@@ -15,6 +15,52 @@ export default async function EnrollmentClassPage({ params }: { params: Promise<
     .eq('emis_code', emisCode)
     .single();
 
+  let sisData = null;
+  try {
+    const TARGET_URL = `https://sis.pesrp.edu.pk/dashboard_revamp/get_gender_bar_class?district=22&tehsil=118&markaz=&school=&classes=&s_id_emis_code=${emisCode}`;
+    const sisRes = await fetch(TARGET_URL, {
+        headers: {
+            "accept": "application/json, text/javascript, */*; q=0.01",
+            "Referer": "https://sis.pesrp.edu.pk/dashboard",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+        },
+        cache: 'no-store'
+    });
+    if (sisRes.ok) {
+        sisData = await sisRes.json();
+    }
+  } catch (err) {
+      console.warn("Failed to fetch live SIS data:", err);
+  }
+
+  // Parse SIS Data
+  const classData = {
+    enr_katchi: 0, enr_class_1: 0, enr_class_2: 0, enr_class_3: 0,
+    enr_class_4: 0, enr_class_5: 0, enr_class_6: 0, enr_class_7: 0,
+    enr_class_8: 0, enr_class_9: 0, enr_class_10: 0, enr_class_11: 0, enr_class_12: 0
+  };
+
+  if (sisData && sisData.categories && sisData.female) {
+      for (let i = 0; i < sisData.categories.length; i++) {
+        const className = String(sisData.categories[i]).toUpperCase();
+        // Since we are tracking all schools now (not just female), we should sum male + female + other
+        const f = parseInt(sisData.female[i]) || 0;
+        const m = parseInt(sisData.male?.[i]) || 0;
+        const o = parseInt(sisData.other?.[i]) || 0;
+        const val = f + m + o;
+        
+        const match = className.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0]);
+          if (num >= 1 && num <= 12) {
+            classData[`enr_class_${num}` as keyof typeof classData] += val;
+          }
+        } else if (className.includes('KATCHI') || className.includes('ECE') || className.includes('NURSERY') || className.includes('PRE')) {
+          classData.enr_katchi += val;
+        }
+      }
+  }
+
   if (error || !data) {
     return (
         <div className="p-20 text-center">
@@ -109,7 +155,7 @@ export default async function EnrollmentClassPage({ params }: { params: Promise<
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                     {classStats.map(c => {
-                        const val = data[c.key] || 0;
+                        const val = classData[c.key as keyof typeof classData] || 0;
                         return (
                             <tr key={c.key} className="hover:bg-slate-50 transition-colors">
                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-3">
@@ -126,7 +172,9 @@ export default async function EnrollmentClassPage({ params }: { params: Promise<
                     })}
                     <tr className="bg-slate-50 border-t-2 border-slate-200">
                         <td className="px-6 py-4 font-black text-slate-900 text-right">TOTAL</td>
-                        <td className="px-6 py-4 text-right font-black text-indigo-700 text-xl">{sCurrent.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right font-black text-indigo-700 text-xl">
+                            {Object.values(classData).reduce((a, b) => a + b, 0).toLocaleString()}
+                        </td>
                     </tr>
                     </tbody>
                 </table>

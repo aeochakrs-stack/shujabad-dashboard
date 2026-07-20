@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Home, School, UploadCloud, FileText, Settings, LogOut, Menu, X, ClipboardList } from 'lucide-react';
+import { Home, School, UploadCloud, FileText, Settings, LogOut, Menu, X, ClipboardList, MapPin } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -25,6 +25,7 @@ export default function Sidebar() {
     { href: '/schools', label: 'School and Markaz Wise Data', icon: School },
     { href: '/data-collection', label: 'Data Collection', icon: ClipboardList },
     { href: '/budget', label: 'Budget Management', icon: FileText },
+    { href: '/location', label: 'Location Map', icon: MapPin },
     ...((role === 'admin' || role === 'developer') ? [{ href: '/upload', label: 'Import Excel', icon: UploadCloud }] : []),
     { href: '/reports', label: 'Generate Reports', icon: FileText },
   ];

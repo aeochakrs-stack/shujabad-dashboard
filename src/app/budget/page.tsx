@@ -55,6 +55,8 @@ export default function BudgetPage() {
         }
 
         // Find header row (usually the first row after the 5 skipped rows, or within)
+        // Since we range: 5, data[0] should be the headers if exactly 5 lines are metadata
+        // Let's assume data[0] is header, data[1...] are rows
         const headers = data[0].map(String).map(h => h.toLowerCase().trim());
         
         const colIdx = {
