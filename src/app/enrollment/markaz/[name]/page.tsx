@@ -5,9 +5,17 @@ import SyncEnrollmentButton from "@/components/SyncEnrollmentButton";
 
 export const revalidate = 0;
 
-export default async function EnrollmentSchoolPage({ params }: { params: Promise<{ name: string }> }) {
+export default async function EnrollmentSchoolPage({ 
+  params,
+  searchParams,
+}: { 
+  params: Promise<{ name: string }>,
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const resolvedParams = await params;
+  const resolvedSearch = await searchParams;
   const markazName = decodeURIComponent(resolvedParams.name);
+  const filterType = resolvedSearch.filter || 'all';
   
   const { data: schoolsData, error } = await supabase
     .from('schools')
@@ -19,11 +27,21 @@ export default async function EnrollmentSchoolPage({ params }: { params: Promise
     console.warn("Error fetching schools:", error.message);
   }
 
-  const schools = ((schoolsData || []) as any[]).filter(s => 
-    s.school_type === 'SED' && 
-    s.psrp_phase === 'Phase 3' && 
-    !['High', 'Higher Secondary'].includes(s.level)
-  );
+  const schools = ((schoolsData || []) as any[]).filter(s => {
+    // Always exclude High/Higher Secondary
+    if (['High', 'Higher Secondary'].includes(s.level)) return false;
+    
+    // Apply UI Filters
+    if (filterType === 'sed') {
+        return s.school_type === 'SED';
+    }
+    if (filterType === 'phase3') {
+        return s.psrp_phase === 'Phase 3';
+    }
+    
+    // Default: All public schools (exclude PRIVATE)
+    return s.school_type !== 'PRIVATE';
+  });
 
   let markazCurrentEnrollment = 0;
   let markazTargetEnrollment = 0;
@@ -57,7 +75,14 @@ export default async function EnrollmentSchoolPage({ params }: { params: Promise
          <div className="p-8 border-b border-slate-100 bg-indigo-50/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h2 className="text-xl font-bold text-slate-900 mb-1">Total Markaz Enrollment</h2>
-            <p className="text-sm text-slate-500">Combined student count for {schools.length} schools.</p>
+            <p className="text-sm text-slate-500 mb-4">Combined student count for {schools.length} schools matching filters.</p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-bold text-slate-500 mr-2 uppercase tracking-wider">Filter:</span>
+              <Link href={`/enrollment/markaz/${encodeURIComponent(markazName)}`} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${filterType === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>All Public Schools</Link>
+              <Link href={`/enrollment/markaz/${encodeURIComponent(markazName)}?filter=sed`} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${filterType === 'sed' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>SED Only</Link>
+              <Link href={`/enrollment/markaz/${encodeURIComponent(markazName)}?filter=phase3`} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${filterType === 'phase3' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>Phase 3 Only</Link>
+            </div>
           </div>
           
           <div className="flex-1 max-w-sm w-full">
