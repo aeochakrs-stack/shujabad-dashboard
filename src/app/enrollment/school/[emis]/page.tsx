@@ -15,52 +15,6 @@ export default async function EnrollmentClassPage({ params }: { params: Promise<
     .eq('emis_code', emisCode)
     .single();
 
-  let sisData = null;
-  try {
-    const TARGET_URL = `https://sis.pesrp.edu.pk/dashboard_revamp/get_gender_bar_class?district=22&tehsil=118&markaz=&school=&classes=&s_id_emis_code=${emisCode}`;
-    const sisRes = await fetch(TARGET_URL, {
-        headers: {
-            "accept": "application/json, text/javascript, */*; q=0.01",
-            "Referer": "https://sis.pesrp.edu.pk/dashboard",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-        },
-        cache: 'no-store'
-    });
-    if (sisRes.ok) {
-        sisData = await sisRes.json();
-    }
-  } catch (err) {
-      console.warn("Failed to fetch live SIS data:", err);
-  }
-
-  // Parse SIS Data
-  const classData = {
-    enr_katchi: 0, enr_class_1: 0, enr_class_2: 0, enr_class_3: 0,
-    enr_class_4: 0, enr_class_5: 0, enr_class_6: 0, enr_class_7: 0,
-    enr_class_8: 0, enr_class_9: 0, enr_class_10: 0, enr_class_11: 0, enr_class_12: 0
-  };
-
-  if (sisData && sisData.categories && sisData.female) {
-      for (let i = 0; i < sisData.categories.length; i++) {
-        const className = String(sisData.categories[i]).toUpperCase();
-        // Since we are tracking all schools now (not just female), we should sum male + female + other
-        const f = parseInt(sisData.female[i]) || 0;
-        const m = parseInt(sisData.male?.[i]) || 0;
-        const o = parseInt(sisData.other?.[i]) || 0;
-        const val = f + m + o;
-        
-        const match = className.match(/\d+/);
-        if (match) {
-          const num = parseInt(match[0]);
-          if (num >= 1 && num <= 12) {
-            classData[`enr_class_${num}` as keyof typeof classData] += val;
-          }
-        } else if (className.includes('KATCHI') || className.includes('ECE') || className.includes('NURSERY') || className.includes('PRE')) {
-          classData.enr_katchi += val;
-        }
-      }
-  }
-
   if (error || !data) {
     return (
         <div className="p-20 text-center">
@@ -74,25 +28,49 @@ export default async function EnrollmentClassPage({ params }: { params: Promise<
   const sTarget = data.enrollment_target || 0;
   const sPercent = sTarget > 0 ? Math.round((sCurrent / sTarget) * 100) : 0;
 
-  // Standard classes to show (Katchi to 10th)
-  // Higher secondary can go up to 12th if data exists, but mostly standard
+  // Standard classes to show
   const classStats = [
-      { name: 'Katchi', key: 'enr_katchi' },
-      { name: 'Class 1', key: 'enr_class_1' },
-      { name: 'Class 2', key: 'enr_class_2' },
-      { name: 'Class 3', key: 'enr_class_3' },
-      { name: 'Class 4', key: 'enr_class_4' },
-      { name: 'Class 5', key: 'enr_class_5' },
-      { name: 'Class 6', key: 'enr_class_6' },
-      { name: 'Class 7', key: 'enr_class_7' },
-      { name: 'Class 8', key: 'enr_class_8' },
-      { name: 'Class 9', key: 'enr_class_9' },
-      { name: 'Class 10', key: 'enr_class_10' },
+      { name: 'Katchi', key: 'enr_katchi', val: 0 },
+      { name: 'Class 1', key: 'enr_class_1', val: 0 },
+      { name: 'Class 2', key: 'enr_class_2', val: 0 },
+      { name: 'Class 3', key: 'enr_class_3', val: 0 },
+      { name: 'Class 4', key: 'enr_class_4', val: 0 },
+      { name: 'Class 5', key: 'enr_class_5', val: 0 },
+      { name: 'Class 6', key: 'enr_class_6', val: 0 },
+      { name: 'Class 7', key: 'enr_class_7', val: 0 },
+      { name: 'Class 8', key: 'enr_class_8', val: 0 },
+      { name: 'Class 9', key: 'enr_class_9', val: 0 },
+      { name: 'Class 10', key: 'enr_class_10', val: 0 },
   ];
   
-  if (data.level === 'H Sec.') {
-      classStats.push({ name: 'Class 11', key: 'enr_class_11' });
-      classStats.push({ name: 'Class 12', key: 'enr_class_12' });
+  if (data.level === 'H Sec.' || data.level === 'Higher Secondary') {
+      classStats.push({ name: 'Class 11', key: 'enr_class_11', val: 0 });
+      classStats.push({ name: 'Class 12', key: 'enr_class_12', val: 0 });
+  }
+
+  // Live fetch from SIS
+  let totalLive = 0;
+  try {
+      const res = await fetch(`https://sis.pesrp.edu.pk/dashboard/get_gender_bar_class?district_id=22&tehsil_id=118&markaz_id=&school_id=&s_id_emis_code=${emisCode}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          next: { revalidate: 3600 } // Cache for 1 hour
+      });
+      if (res.ok) {
+          const sisData = await res.json();
+          const males = sisData.male || [];
+          const females = sisData.female || [];
+          const others = sisData.other || [];
+          
+          for (let i = 0; i < classStats.length; i++) {
+              const m = males[i] || 0;
+              const f = females[i] || 0;
+              const o = others[i] || 0;
+              classStats[i].val = m + f + o;
+              totalLive += (m + f + o);
+          }
+      }
+  } catch(e) {
+      console.warn("Failed to fetch live SIS class data", e);
   }
 
   return (
@@ -155,7 +133,7 @@ export default async function EnrollmentClassPage({ params }: { params: Promise<
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                     {classStats.map(c => {
-                        const val = classData[c.key as keyof typeof classData] || 0;
+                        const val = c.val || 0;
                         return (
                             <tr key={c.key} className="hover:bg-slate-50 transition-colors">
                                 <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-3">
@@ -172,9 +150,7 @@ export default async function EnrollmentClassPage({ params }: { params: Promise<
                     })}
                     <tr className="bg-slate-50 border-t-2 border-slate-200">
                         <td className="px-6 py-4 font-black text-slate-900 text-right">TOTAL</td>
-                        <td className="px-6 py-4 text-right font-black text-indigo-700 text-xl">
-                            {Object.values(classData).reduce((a, b) => a + b, 0).toLocaleString()}
-                        </td>
+                        <td className="px-6 py-4 text-right font-black text-indigo-700 text-xl">{totalLive.toLocaleString()}</td>
                     </tr>
                     </tbody>
                 </table>
