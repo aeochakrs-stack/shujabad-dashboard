@@ -1,21 +1,8 @@
 import { MapPin, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import dynamic from 'next/dynamic';
+import DynamicMap from '@/components/DynamicMap';
 
 export const revalidate = 0;
-
-// Leaflet uses window, so we must load it dynamically with SSR disabled
-const MapWrapper = dynamic(() => import('@/components/MapWrapper'), { 
-    ssr: false,
-    loading: () => (
-        <div className="h-[600px] w-full rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-3 animate-pulse">
-                <MapPin className="w-8 h-8 text-slate-300" />
-                <p className="text-slate-400 font-medium">Loading Map Data...</p>
-            </div>
-        </div>
-    )
-});
 
 export default async function LocationDashboard() {
   const { data: schools, error } = await supabase
@@ -52,7 +39,7 @@ export default async function LocationDashboard() {
         </div>
       </div>
 
-      <MapWrapper schools={schools || []} />
+      <DynamicMap schools={schools || []} />
     </div>
   );
 }
