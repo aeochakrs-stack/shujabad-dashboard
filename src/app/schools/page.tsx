@@ -187,7 +187,7 @@ export default function SchoolsDataPage() {
     async function fetchData() {
       setLoading(true);
       const [schoolsRes, staffRes] = await Promise.all([
-        supabase.from('schools').select('*'),
+        supabase.from('schools').select('*, sanctioned_posts(*)'),
         supabase.from('hrmis_staff').select('*') 
       ]);
 
