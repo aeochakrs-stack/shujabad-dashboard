@@ -14,7 +14,11 @@ export default async function EnrollmentMarkazPage() {
 
   const schools = (schoolsData || []) as any[];
   const safeSchools = schools.filter(s => s.emis_code && s.markaz);
-  const publicSchools = safeSchools.filter(s => s.school_type !== 'PRIVATE');
+  const publicSchools = safeSchools.filter(s => 
+    s.school_type === 'SED' && 
+    s.psrp_phase === 'Phase 3' && 
+    !['High', 'Higher Secondary'].includes(s.level)
+  );
 
   let totalCurrentEnrollment = 0;
   let totalTargetEnrollment = 0;
@@ -34,7 +38,12 @@ export default async function EnrollmentMarkazPage() {
 
   safeSchools.forEach(s => {
     const m = s.markaz || '';
-    if (targetMarkazs.includes(m) && s.school_type !== 'PRIVATE') {
+    if (
+      targetMarkazs.includes(m) && 
+      s.school_type === 'SED' && 
+      s.psrp_phase === 'Phase 3' && 
+      !['High', 'Higher Secondary'].includes(s.level)
+    ) {
       markazMap[m].totalSchools += 1;
       markazMap[m].enrollCurrent += (s.enrollment_total || 0);
       markazMap[m].enrollTarget += (s.enrollment_target || 0);
