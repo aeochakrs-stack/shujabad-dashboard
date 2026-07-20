@@ -124,6 +124,11 @@ export default async function Home() {
            <span className="text-xl font-black text-sky-900">12</span>
            <span className="text-xs font-bold text-sky-700 uppercase tracking-wider text-center px-2">Assistant Education Officers</span>
         </Link>
+        <Link href="/budget" className="bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 transition-colors rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer shadow-sm shadow-emerald-200 col-span-2 md:col-span-1">
+           <Building className="w-6 h-6 text-white mb-2" />
+           <span className="text-xl font-black text-white">Budget</span>
+           <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider">Account Office Data</span>
+        </Link>
         <Link href="/schools" className="bg-indigo-600 hover:bg-indigo-700 border border-indigo-700 transition-colors rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer shadow-sm shadow-indigo-200 col-span-2 md:col-span-1">
            <Users className="w-6 h-6 text-white mb-2" />
            <span className="text-xl font-black text-white">All Data</span>
@@ -131,61 +136,31 @@ export default async function Home() {
         </Link>
       </div>
 
-      {/* Enrollment Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row">
-        
-        {/* Left Side: Tehsil Total */}
-        <div className="p-8 md:w-1/3 flex flex-col justify-center bg-indigo-50/50">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-1">
-              <Users className="w-6 h-6 text-indigo-500"/> Live Enrollment
+      {/* Enrollment Card (Collapsed) */}
+      <Link href="/enrollment" className="block bg-white hover:bg-indigo-50/30 rounded-2xl border border-slate-200 hover:border-indigo-300 transition-all shadow-sm overflow-hidden group">
+        <div className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-1 group-hover:text-indigo-600 transition-colors">
+              <Users className="w-6 h-6 text-indigo-500"/> Tehsil Enrollment Drill-Down &rarr;
             </h2>
-            <p className="text-sm text-slate-500">Tehsil wide student count vs target.</p>
+            <p className="text-sm text-slate-500">Click to view Markaz-wise, School-wise, and Class-wise breakdowns.</p>
           </div>
-          <div className="flex items-end gap-2 mb-3">
-            <span className="text-5xl font-black text-slate-900 tracking-tight">{totalCurrentEnrollment.toLocaleString()}</span>
-          </div>
-          <div className="text-lg font-medium text-slate-500 mb-6">/ {totalTargetEnrollment.toLocaleString()} Target</div>
           
-          <div className="w-full bg-slate-200/70 rounded-full h-4 mb-2 overflow-hidden shadow-inner">
-            <div 
-              className={`h-full ${enrollmentPercent >= 100 ? 'bg-emerald-500' : enrollmentPercent >= 80 ? 'bg-amber-400' : 'bg-rose-500'} transition-all duration-1000 ease-out`}
-              style={{ width: `${Math.min(enrollmentPercent, 100)}%` }}
-            ></div>
+          <div className="flex-1 max-w-sm">
+             <div className="flex justify-between items-end mb-2">
+                <span className="text-3xl font-black text-slate-900">{totalCurrentEnrollment.toLocaleString()}</span>
+                <span className="text-sm font-bold text-slate-500">/ {totalTargetEnrollment.toLocaleString()} Target</span>
+             </div>
+             <div className="w-full bg-slate-100 rounded-full h-3 mb-1 overflow-hidden shadow-inner">
+                <div 
+                  className={`h-full ${enrollmentPercent >= 100 ? 'bg-emerald-500' : enrollmentPercent >= 80 ? 'bg-amber-400' : 'bg-rose-500'} transition-all duration-1000 ease-out`}
+                  style={{ width: `${Math.min(enrollmentPercent, 100)}%` }}
+                ></div>
+             </div>
+             <p className="text-xs font-bold text-slate-400 text-right">{enrollmentPercent}% Achieved</p>
           </div>
-          <p className="text-sm font-bold text-slate-600 text-right">{enrollmentPercent}% Achieved</p>
         </div>
-
-        {/* Right Side: Markaz Breakdown */}
-        <div className="p-6 md:w-2/3 border-t md:border-t-0 md:border-l border-slate-100 bg-white">
-           <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider flex items-center gap-2">
-             <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span> Markaz Breakdown
-           </h3>
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-             {markazStats.map(m => {
-               const mPercent = m.enrollTarget > 0 ? Math.round((m.enrollCurrent / m.enrollTarget) * 100) : 0;
-               return (
-                 <div key={m.name} className="flex flex-col p-3 rounded-lg border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-colors">
-                   <div className="flex justify-between items-center mb-1.5">
-                     <span className="text-xs font-bold text-slate-700 truncate mr-2" title={m.name}>{m.name.replace(' - FEMALE', '')}</span>
-                     <span className={`text-xs font-bold ${mPercent >= 100 ? 'text-emerald-600' : mPercent >= 80 ? 'text-amber-600' : 'text-rose-600'}`}>{mPercent}%</span>
-                   </div>
-                   <div className="flex justify-between items-center text-[10px] text-slate-500 mb-2 font-medium">
-                     <span>{m.enrollCurrent.toLocaleString()} / {m.enrollTarget.toLocaleString()}</span>
-                   </div>
-                   <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                     <div 
-                       className={`h-full ${mPercent >= 100 ? 'bg-emerald-500' : mPercent >= 80 ? 'bg-amber-400' : 'bg-rose-500'}`}
-                       style={{ width: `${Math.min(mPercent, 100)}%` }}
-                     ></div>
-                   </div>
-                 </div>
-               );
-             })}
-           </div>
-        </div>
-
-      </div>
+      </Link>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
         <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
