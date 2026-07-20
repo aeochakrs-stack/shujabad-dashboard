@@ -240,7 +240,7 @@ export default function BudgetPage() {
         const revisedBudget = revisedBudgetsMap[row.id] || 0;
 
         // Determine if row should be bold
-        const isBoldTotal = ["A01", "A011", "A012", "A039"].includes(row.object_code) || 
+        const isBoldTotal = ["A01", "A011", "A012", "A039", "A04", "A05", "A012-2"].includes(row.object_code) || 
                             ["GRAND TOTAL", "Total"].includes(row.designation);
 
         // Add blank row if it's a major section start to recreate PDF gaps
@@ -343,7 +343,7 @@ export default function BudgetPage() {
                               const revisedSanctioned = Math.max(0, (row.sanctioned_25_26 || 0) - (row.abolished_seats || 0));
                               const revisedBudget = revisedBudgetsMap[row.id] || 0;
 
-                              const isBoldTotal = ["A01", "A011", "A012", "A039"].includes(row.object_code) || 
+                              const isBoldTotal = ["A01", "A011", "A012", "A039", "A04", "A05", "A012-2"].includes(row.object_code) || 
                                                   ["GRAND TOTAL", "Total"].includes(row.designation);
 
                               return (
