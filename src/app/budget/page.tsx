@@ -22,7 +22,7 @@ export default function BudgetPage() {
 
   async function fetchBudget() {
     setLoading(true);
-    const { data, error } = await supabase.from('account_office_budget').select('*').order('account_office_code', { ascending: true });
+    const { data, error } = await supabase.from('account_office_budget').select('*').order('created_at', { ascending: true });
     if (!error && data) {
       setBudgetData(data);
     }
@@ -53,8 +53,6 @@ export default function BudgetPage() {
         }
 
         // Find header row (usually the first row after the 5 skipped rows, or within)
-        // Since we range: 5, data[0] should be the headers if exactly 5 lines are metadata
-        // Let's assume data[0] is header, data[1...] are rows
         const headers = data[0].map(String).map(h => h.toLowerCase().trim());
         
         const colIdx = {
@@ -131,10 +129,12 @@ export default function BudgetPage() {
         }
 
         return {
-            "Account Office Code": row.account_office_code,
+            "Object Code": row.object_code,
             "Designation": row.designation,
             "Scale/BS": row.bps,
             "Original Sanctioned (25-26)": row.sanctioned_25_26,
+            "Annual Budget (24-25)": row.budget_24_25,
+            "Revised Budget (24-25)": row.revised_budget_24_25,
             "Abolished Seats": row.abolished_seats,
             "Revised Sanctioned (25-26)": revisedSanctioned,
             "Original Budget Estimate": row.proposed_estimate_25_26,
@@ -200,14 +200,16 @@ export default function BudgetPage() {
                   <table className="w-full text-left text-sm whitespace-nowrap">
                       <thead className="bg-white border-b border-slate-200 text-slate-600 sticky top-0 z-10 shadow-sm">
                           <tr>
-                              <th className="px-4 py-3 font-semibold">Code</th>
+                              <th className="px-4 py-3 font-semibold">Obj Code</th>
                               <th className="px-4 py-3 font-semibold">Designation</th>
-                              <th className="px-4 py-3 font-semibold text-center">BPS</th>
+                              <th className="px-4 py-3 font-semibold text-center">BS</th>
                               <th className="px-4 py-3 font-semibold text-center bg-slate-50">Sanctioned<br/><span className="text-[10px]">25-26</span></th>
+                              <th className="px-4 py-3 font-semibold text-right bg-slate-50">Annual Budget<br/><span className="text-[10px]">24-25</span></th>
+                              <th className="px-4 py-3 font-semibold text-right bg-slate-50">Revised Budget<br/><span className="text-[10px]">24-25</span></th>
+                              <th className="px-4 py-3 font-semibold text-right bg-slate-50">Original Estimate<br/><span className="text-[10px]">25-26</span></th>
                               <th className="px-4 py-3 font-bold text-center bg-rose-50 text-rose-700">Abolished<br/><span className="text-[10px]">Seats</span></th>
                               <th className="px-4 py-3 font-bold text-center bg-emerald-50 text-emerald-700">Revised<br/><span className="text-[10px]">Sanctioned</span></th>
-                              <th className="px-4 py-3 font-semibold text-right bg-slate-50">Original Estimate<br/><span className="text-[10px]">25-26</span></th>
-                              <th className="px-4 py-3 font-bold text-right bg-indigo-50 text-indigo-700">Revised Estimate<br/><span className="text-[10px]">25-26</span></th>
+                              <th className="px-4 py-3 font-bold text-right bg-indigo-50 text-indigo-700">Revised Estimate<br/><span className="text-[10px]">26-27</span></th>
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -220,30 +222,40 @@ export default function BudgetPage() {
                                   revisedBudget = Math.round((row.proposed_estimate_25_26 / row.sanctioned_25_26) * revisedSanctioned);
                               }
 
+                              const isTotalRow = row.designation.toUpperCase().includes('TOTAL') || !row.bps;
+
                               return (
-                                  <tr key={row.id} className="hover:bg-slate-50">
-                                      <td className="px-4 py-3 font-mono text-xs text-slate-500">{row.account_office_code}</td>
-                                      <td className="px-4 py-3 font-bold text-slate-800">{row.designation}</td>
-                                      <td className="px-4 py-3 text-center"><span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">{row.bps}</span></td>
-                                      <td className="px-4 py-3 text-center font-bold text-slate-700 bg-slate-50/50">{row.sanctioned_25_26}</td>
-                                      <td className="px-4 py-2 text-center bg-rose-50/30">
-                                          <input 
-                                              type="number" 
-                                              min="0"
-                                              className="w-20 px-2 py-1 text-center border border-rose-200 rounded-md bg-white text-rose-700 font-bold focus:ring-rose-500 focus:border-rose-500"
-                                              value={row.abolished_seats || ''}
-                                              onChange={(e) => handleAbolishedChange(row.id, e.target.value)}
-                                              placeholder="0"
-                                          />
-                                      </td>
-                                      <td className="px-4 py-3 text-center font-black text-emerald-600 bg-emerald-50/30">
-                                          {revisedSanctioned}
+                                  <tr key={row.id} className={`hover:bg-slate-50 ${isTotalRow ? 'bg-indigo-50/20 font-semibold' : ''}`}>
+                                      <td className="px-4 py-3 font-mono text-xs text-slate-500">{row.object_code}</td>
+                                      <td className={`px-4 py-3 text-slate-800 ${isTotalRow ? 'font-black uppercase' : 'font-medium'}`}>{row.designation}</td>
+                                      <td className="px-4 py-3 text-center">{row.bps && <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold">{row.bps}</span>}</td>
+                                      <td className="px-4 py-3 text-center text-slate-700 bg-slate-50/50">{row.sanctioned_25_26 || '-'}</td>
+                                      <td className="px-4 py-3 text-right font-medium text-slate-500 bg-slate-50/50">
+                                          {row.budget_24_25 > 0 ? `Rs. ${Number(row.budget_24_25).toLocaleString()}` : '-'}
                                       </td>
                                       <td className="px-4 py-3 text-right font-medium text-slate-500 bg-slate-50/50">
-                                          Rs. {Number(row.proposed_estimate_25_26).toLocaleString()}
+                                          {row.revised_budget_24_25 > 0 ? `Rs. ${Number(row.revised_budget_24_25).toLocaleString()}` : '-'}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-bold text-slate-600 bg-slate-50/50">
+                                          {row.proposed_estimate_25_26 > 0 ? `Rs. ${Number(row.proposed_estimate_25_26).toLocaleString()}` : '-'}
+                                      </td>
+                                      <td className="px-4 py-2 text-center bg-rose-50/30">
+                                          {row.sanctioned_25_26 > 0 ? (
+                                            <input 
+                                                type="number" 
+                                                min="0"
+                                                className="w-20 px-2 py-1 text-center border border-rose-200 rounded-md bg-white text-rose-700 font-bold focus:ring-rose-500 focus:border-rose-500"
+                                                value={row.abolished_seats || ''}
+                                                onChange={(e) => handleAbolishedChange(row.id, e.target.value)}
+                                                placeholder="0"
+                                            />
+                                          ) : <span className="text-slate-300">-</span>}
+                                      </td>
+                                      <td className="px-4 py-3 text-center font-black text-emerald-600 bg-emerald-50/30">
+                                          {row.sanctioned_25_26 > 0 ? revisedSanctioned : '-'}
                                       </td>
                                       <td className="px-4 py-3 text-right font-black text-indigo-700 bg-indigo-50/30">
-                                          Rs. {revisedBudget.toLocaleString()}
+                                          {revisedBudget > 0 ? `Rs. ${revisedBudget.toLocaleString()}` : '-'}
                                       </td>
                                   </tr>
                               );
