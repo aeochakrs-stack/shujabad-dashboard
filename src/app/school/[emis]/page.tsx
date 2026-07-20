@@ -28,6 +28,8 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
   const [censusData, setCensusData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [viewingStaff, setViewingStaff] = useState<any>(null);
+  const [liveTeachers, setLiveTeachers] = useState<any[]>([]);
+  const [fetchingLive, setFetchingLive] = useState(false);
 
   // Column Filters State
   const [filters, setFilters] = useState({
@@ -61,10 +63,10 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
       if (school) {
           if (!school.level && school.school_name) {
               const name = school.school_name.toUpperCase();
-              if (name.includes(' GGHS ') || name.includes(' GHS ') || name.startsWith('GGHS ') || name.startsWith('GHS ')) school.level = 'High';
-              else if (name.includes(' GGHSS ') || name.includes(' GHSS ') || name.startsWith('GGHSS ') || name.startsWith('GHSS ')) school.level = 'Higher Secondary';
-              else if (name.includes(' GGES ') || name.includes(' GES ') || name.startsWith('GGES ') || name.startsWith('GES ')) school.level = 'Middle';
-              else if (name.includes(' GGPS ') || name.includes(' GPS ') || name.includes(' GMPS ') || name.startsWith('GGPS ') || name.startsWith('GPS ') || name.startsWith('GMPS ')) school.level = 'Primary';
+              if (name.includes(' GGHS ') || name.includes(' GHS ') || name.startsWith('GGHS ') || name.startsWith('GHS ') || name.endsWith(' GHS') || name.endsWith(' GGHS')) school.level = 'High';
+              else if (name.includes(' GGHSS ') || name.includes(' GHSS ') || name.startsWith('GGHSS ') || name.startsWith('GHSS ') || name.endsWith(' GHSS') || name.endsWith(' GGHSS')) school.level = 'Higher Secondary';
+              else if (name.includes(' GGES ') || name.includes(' GES ') || name.includes(' GGCMS ') || name.includes(' GCMS ') || name.startsWith('GGES ') || name.startsWith('GES ') || name.endsWith(' GES') || name.endsWith(' GGES') || name.endsWith(' GGCMS')) school.level = 'Middle';
+              else if (name.includes(' GGPS ') || name.includes(' GPS ') || name.includes(' GMPS ') || name.startsWith('GGPS ') || name.startsWith('GPS ') || name.startsWith('GMPS ') || name.endsWith(' GPS') || name.endsWith(' GGPS') || name.endsWith(' GMPS')) school.level = 'Primary';
               else if (name.includes(' MC ') || name.startsWith('MC ')) school.level = 'Primary';
           }
           if (!school.gender && school.school_name) {
@@ -95,6 +97,19 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
       }
       
       setLoading(false);
+      
+      // Fetch live teachers in background
+      setFetchingLive(true);
+      try {
+          const tRes = await fetch(`/api/sis-teachers/${emis}`);
+          if (tRes.ok) {
+              const tData = await tRes.json();
+              setLiveTeachers(tData.teachers || []);
+          }
+      } catch(e) {
+          console.error(e);
+      }
+      setFetchingLive(false);
     }
     fetchData();
   }, [emis]);
@@ -108,7 +123,8 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
   
   const tabs = [
     { id: "overview", label: "School Overview", icon: Building },
-    { id: "staff", label: "Staff Data", icon: Users },
+    { id: "sis_staff", label: "Active Teachers (SIS Live)", icon: Users },
+    { id: "staff", label: "HRMIS Database Staff", icon: Users },
     ...censusTabs
   ];
 
@@ -131,8 +147,27 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
   });
 
   const displayPosts = useMemo(() => {
+      const assignBPS = (desig: string) => {
+          if (!desig) return '-';
+          const d = desig.toUpperCase();
+          if (d.includes('PST') || d.includes('ESE')) return '14';
+          if (d.includes('EST') || d.includes('SESE')) return '15';
+          if (d.includes('SST') || d.includes('SSE')) return '16';
+          if (d.includes('SS') || d.includes('HEADMASTER') || d.includes('PRINCIPAL')) return '17';
+          if (d.includes('CLASS 4') || d.includes('CLASS IV') || d.includes('NAIB QASID') || d.includes('CHOWKIDAR') || d.includes('SWEEPER')) return '1';
+          if (d.includes('CLERK')) return '11';
+          return '-';
+      };
+
       if (schoolData?.sanctioned_posts && Array.isArray(schoolData.sanctioned_posts) && schoolData.sanctioned_posts.length > 0) {
-          return schoolData.sanctioned_posts;
+          return schoolData.sanctioned_posts.map((p: any) => ({
+              ...p,
+              bps: p.bps || assignBPS(p.designation)
+          })).sort((a: any, b: any) => {
+              const valA = a.bps === '-' ? 0 : Number(a.bps);
+              const valB = b.bps === '-' ? 0 : Number(b.bps);
+              return valB - valA;
+          });
       }
       
       // Fallback: calculate from staff list
@@ -243,6 +278,20 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
                     <div><span className="text-xs text-slate-500 block">School Name</span><span className="font-bold text-slate-800">{schoolData?.school_name || '-'}</span></div>
                     <div><span className="text-xs text-slate-500 block">EMIS Code</span><span className="font-mono font-bold text-indigo-600">{schoolData?.emis_code || '-'}</span></div>
                     <div><span className="text-xs text-slate-500 block">Markaz</span><span className="font-medium text-slate-700">{schoolData?.markaz || '-'}</span></div>
+                    {schoolData?.latitude && schoolData?.longitude && (
+                      <div className="pt-2 border-t border-slate-200">
+                        <span className="text-xs text-slate-500 block">GPS Location</span>
+                        <a 
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${schoolData.latitude},${schoolData.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer" 
+                          className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 mt-1"
+                        >
+                          <MapPin className="w-4 h-4" />
+                          Get Directions
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -304,6 +353,58 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* LIVE SIS STAFF TAB */}
+          {activeTab === "sis_staff" && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium text-slate-900 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-indigo-500"/>
+                  Active Teachers (Fetched Live from SIS)
+                </h2>
+                {fetchingLive && (
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md animate-pulse">Fetching Live Data...</span>
+                )}
+              </div>
+              
+              {!fetchingLive && liveTeachers.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-sm text-slate-500">No active teachers found on the SIS Teacher Assignment tab for this school.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-200 w-full">
+                  <table className="min-w-max w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left align-top w-16">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">#</span>
+                        </th>
+                        <th className="px-4 py-3 text-left align-top">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Teacher Name</span>
+                        </th>
+                        <th className="px-4 py-3 text-left align-top">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Designation</span>
+                        </th>
+                        <th className="px-4 py-3 text-left align-top">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">CNIC (Masked)</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-100">
+                      {liveTeachers.map((t, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 text-sm text-slate-500 font-mono">{idx + 1}</td>
+                          <td className="px-4 py-3 font-bold text-indigo-600 text-sm whitespace-nowrap">{t.name}</td>
+                          <td className="px-4 py-3 font-medium text-slate-700 text-sm whitespace-nowrap">{t.designation}</td>
+                          <td className="px-4 py-3 text-slate-500 text-sm font-mono whitespace-nowrap">{t.cnic_masked}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
