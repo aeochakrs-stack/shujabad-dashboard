@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { UploadCloud, FileSpreadsheet, Calculator, Save, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -120,13 +120,100 @@ export default function BudgetPage() {
       alert('Budget updated successfully!');
   };
 
+  const revisedBudgetsMap = useMemo(() => {
+    if (budgetData.length === 0) return {};
+    const rb: Record<string, number> = {};
+
+    // 1. Calculate leaves
+    budgetData.forEach(row => {
+      const revisedSanctioned = Math.max(0, (row.sanctioned_25_26 || 0) - (row.abolished_seats || 0));
+      let val = row.proposed_estimate_25_26;
+      if (row.sanctioned_25_26 > 0 && revisedSanctioned < row.sanctioned_25_26) {
+          val = Math.round((row.proposed_estimate_25_26 / row.sanctioned_25_26) * revisedSanctioned);
+      }
+      rb[row.id] = val;
+    });
+
+    const getIndex = (desig: string) => budgetData.findIndex(r => r.designation === desig);
+    const sumByIndex = (startIdx: number, endIdx: number) => {
+        if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) return 0;
+        let sum = 0;
+        for(let i = startIdx; i <= endIdx; i++) sum += rb[budgetData[i].id];
+        return sum;
+    };
+
+    const idxA01101 = getIndex("Total Basic Pay of Officers");
+    const idxA011_2 = getIndex("TOTAL PAY OF OTHER STAFF");
+    
+    const officersSum = sumByIndex(idxA01101 + 1, idxA011_2 - 1);
+    if (idxA01101 !== -1) rb[budgetData[idxA01101].id] = officersSum;
+    const idxA011_1 = getIndex("TOTAL PAY OF OFFICERS");
+    if (idxA011_1 !== -1) rb[budgetData[idxA011_1].id] = officersSum;
+
+    const idxA01151 = getIndex("Total Basic Pay of Other Staff");
+    const idxA012 = getIndex("TOTAL ALLOWANCES");
+    const staffSum = sumByIndex(idxA01151 + 1, idxA012 - 1);
+    if (idxA01151 !== -1) rb[budgetData[idxA01151].id] = staffSum;
+    if (idxA011_2 !== -1) rb[budgetData[idxA011_2].id] = staffSum;
+
+    const idxA011 = getIndex("TOTAL PAY");
+    if (idxA011 !== -1) rb[budgetData[idxA011].id] = officersSum + staffSum;
+
+    const idxHR = getIndex("House Rent Allowance");
+    const idxSSB = getIndex("Other (SSB etc.)");
+    const regAllowancesSum = sumByIndex(idxHR, idxSSB);
+    const idxA012_1 = getIndex("TOTAL REGULAR ALLOWANCES");
+    if (idxA012_1 !== -1) rb[budgetData[idxA012_1].id] = regAllowancesSum;
+
+    const idxHonoraria = getIndex("Honoraria");
+    const idxLeave = getIndex("Leave Salary");
+    const otherAllowancesSum = sumByIndex(idxHonoraria, idxLeave);
+    const idxA012_2 = getIndex("TOTAL OTHER ALLOWANCES(EXCLUDING TA)");
+    if (idxA012_2 !== -1) rb[budgetData[idxA012_2].id] = otherAllowancesSum;
+
+    if (idxA012 !== -1) rb[budgetData[idxA012].id] = regAllowancesSum + otherAllowancesSum;
+
+    const idxStipend = getIndex("Stipend Incentives Awards");
+    const idxOthers = getIndex("Others");
+    const generalSum = sumByIndex(idxStipend, idxOthers);
+    const idxA039 = getIndex("TOTAL GENERAL");
+    if (idxA039 !== -1) rb[budgetData[idxA039].id] = generalSum;
+
+    const idxA01 = getIndex("TOTAL EMPLOYEES RELATED EXPENSES");
+    const sumA01 = (officersSum + staffSum) + (regAllowancesSum + otherAllowancesSum) + generalSum;
+    if (idxA01 !== -1) rb[budgetData[idxA01].id] = sumA01;
+
+    const idxPensionLeaf = getIndex("Superannuation Encashment on L.P.R");
+    const pensionVal = idxPensionLeaf !== -1 ? rb[budgetData[idxPensionLeaf].id] : 0;
+    const idxPension1 = getIndex("PENSION");
+    const idxPension2 = getIndex("EMPLOYEES RETIREMENT BENEFITS");
+    if (idxPension1 !== -1) rb[budgetData[idxPension1].id] = pensionVal;
+    if (idxPension2 !== -1) rb[budgetData[idxPension2].id] = pensionVal;
+
+    const idxGrantLeaf = getIndex("Financial Assistance");
+    const grantVal = idxGrantLeaf !== -1 ? rb[budgetData[idxGrantLeaf].id] : 0;
+    const idxGrant1 = getIndex("GRANTS DOMESTIC");
+    const idxGrant2 = getIndex("GRANTS, SUBSIDIES & WRITEOFFS");
+    if (idxGrant1 !== -1) rb[budgetData[idxGrant1].id] = grantVal;
+    if (idxGrant2 !== -1) rb[budgetData[idxGrant2].id] = grantVal;
+
+    const idxGrand = getIndex("GRAND TOTAL");
+    const idxSalary = getIndex("Salary");
+    const idxNonSalary = getIndex("Non-Salary");
+    const idxTotal = getIndex("Total");
+
+    if (idxSalary !== -1) rb[budgetData[idxSalary].id] = sumA01;
+    if (idxNonSalary !== -1) rb[budgetData[idxNonSalary].id] = pensionVal + grantVal;
+    if (idxGrand !== -1) rb[budgetData[idxGrand].id] = sumA01 + pensionVal + grantVal;
+    if (idxTotal !== -1) rb[budgetData[idxTotal].id] = sumA01 + pensionVal + grantVal;
+
+    return rb;
+  }, [budgetData]);
+
   const exportRevisedBudget = () => {
     const exportData = budgetData.map(row => {
         const revisedSanctioned = Math.max(0, (row.sanctioned_25_26 || 0) - (row.abolished_seats || 0));
-        let revisedBudget = row.proposed_estimate_25_26;
-        if (row.sanctioned_25_26 > 0 && revisedSanctioned < row.sanctioned_25_26) {
-            revisedBudget = Math.round((row.proposed_estimate_25_26 / row.sanctioned_25_26) * revisedSanctioned);
-        }
+        const revisedBudget = revisedBudgetsMap[row.id] || 0;
 
         return {
             "Object Code": row.object_code,
@@ -217,12 +304,7 @@ export default function BudgetPage() {
                       <tbody className="divide-y divide-slate-100">
                           {budgetData.map((row) => {
                               const revisedSanctioned = Math.max(0, (row.sanctioned_25_26 || 0) - (row.abolished_seats || 0));
-                              
-                              // Calculate revised budget proportionally
-                              let revisedBudget = row.proposed_estimate_25_26;
-                              if (row.sanctioned_25_26 > 0 && revisedSanctioned < row.sanctioned_25_26) {
-                                  revisedBudget = Math.round((row.proposed_estimate_25_26 / row.sanctioned_25_26) * revisedSanctioned);
-                              }
+                              const revisedBudget = revisedBudgetsMap[row.id] || 0;
 
                               const isTotalRow = row.designation.toUpperCase().includes('TOTAL') || !row.bps;
 
