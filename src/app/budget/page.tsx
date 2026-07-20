@@ -132,6 +132,7 @@ export default function BudgetPage() {
             "Object Code": row.object_code,
             "Designation": row.designation,
             "Scale/BS": row.bps,
+            "Original Sanctioned (24-25)": row.sanctioned_24_25,
             "Original Sanctioned (25-26)": row.sanctioned_25_26,
             "Annual Budget (24-25)": row.budget_24_25,
             "Revised Budget (24-25)": row.revised_budget_24_25,
@@ -203,6 +204,7 @@ export default function BudgetPage() {
                               <th className="px-4 py-3 font-semibold">Obj Code</th>
                               <th className="px-4 py-3 font-semibold">Designation</th>
                               <th className="px-4 py-3 font-semibold text-center">BS</th>
+                              <th className="px-4 py-3 font-semibold text-center bg-slate-50">Sanctioned<br/><span className="text-[10px]">24-25</span></th>
                               <th className="px-4 py-3 font-semibold text-center bg-slate-50">Sanctioned<br/><span className="text-[10px]">25-26</span></th>
                               <th className="px-4 py-3 font-semibold text-right bg-slate-50">Annual Budget<br/><span className="text-[10px]">24-25</span></th>
                               <th className="px-4 py-3 font-semibold text-right bg-slate-50">Revised Budget<br/><span className="text-[10px]">24-25</span></th>
@@ -229,6 +231,7 @@ export default function BudgetPage() {
                                       <td className="px-4 py-3 font-mono text-xs text-slate-500">{row.object_code}</td>
                                       <td className={`px-4 py-3 text-slate-800 ${isTotalRow ? 'font-black uppercase' : 'font-medium'}`}>{row.designation}</td>
                                       <td className="px-4 py-3 text-center">{row.bps && <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold">{row.bps}</span>}</td>
+                                      <td className="px-4 py-3 text-center text-slate-700 bg-slate-50/50">{row.sanctioned_24_25 || '-'}</td>
                                       <td className="px-4 py-3 text-center text-slate-700 bg-slate-50/50">{row.sanctioned_25_26 || '-'}</td>
                                       <td className="px-4 py-3 text-right font-medium text-slate-500 bg-slate-50/50">
                                           {row.budget_24_25 > 0 ? `Rs. ${Number(row.budget_24_25).toLocaleString()}` : '-'}
