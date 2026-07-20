@@ -240,10 +240,8 @@ export default function BudgetPage() {
         const revisedBudget = revisedBudgetsMap[row.id] || 0;
 
         // Determine if row should be bold
-        const boldKeywords = ["A01", "A011", "A012", "A039", "GRAND TOTAL", "Salary", "Non-Salary", "Total", "TOTAL"];
-        const isBoldTotal = boldKeywords.some(str => 
-            row.designation.toUpperCase().includes(str) || row.object_code === str
-        ) || !row.bps;
+        const isBoldTotal = ["A01", "A011", "A012", "A039"].includes(row.object_code) || 
+                            ["GRAND TOTAL", "Total"].includes(row.designation);
 
         // Add blank row if it's a major section start to recreate PDF gaps
         const addBlankBefore = ["A012", "A012-2", "A039", "A04", "A05"].includes(row.object_code) || row.designation === "GRAND TOTAL";
@@ -345,12 +343,13 @@ export default function BudgetPage() {
                               const revisedSanctioned = Math.max(0, (row.sanctioned_25_26 || 0) - (row.abolished_seats || 0));
                               const revisedBudget = revisedBudgetsMap[row.id] || 0;
 
-                              const isTotalRow = row.designation.toUpperCase().includes('TOTAL') || !row.bps;
+                              const isBoldTotal = ["A01", "A011", "A012", "A039"].includes(row.object_code) || 
+                                                  ["GRAND TOTAL", "Total"].includes(row.designation);
 
                               return (
-                                  <tr key={row.id} className={`hover:bg-slate-50 ${isTotalRow ? 'bg-indigo-50/20 font-semibold' : ''}`}>
+                                  <tr key={row.id} className={`hover:bg-slate-50 ${isBoldTotal ? 'bg-indigo-50/20 font-semibold' : ''}`}>
                                       <td className="px-4 py-3 font-mono text-xs text-slate-500">{row.object_code}</td>
-                                      <td className={`px-4 py-3 text-slate-800 ${isTotalRow ? 'font-black uppercase' : 'font-medium'}`}>{row.designation}</td>
+                                      <td className={`px-4 py-3 text-slate-800 ${isBoldTotal ? 'font-black uppercase' : 'font-medium'}`}>{row.designation}</td>
                                       <td className="px-4 py-3 text-center">{row.bps && <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold">{row.bps}</span>}</td>
                                       <td className="px-4 py-3 text-center text-slate-700 bg-slate-50/50">{row.sanctioned_24_25 || '-'}</td>
                                       <td className="px-4 py-3 text-center text-slate-700 bg-slate-50/50">{row.sanctioned_25_26 || '-'}</td>
