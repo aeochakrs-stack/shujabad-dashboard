@@ -51,7 +51,7 @@ export default function SchoolDetails({ params }: { params: Promise<{ emis: stri
     async function fetchData() {
       const [staffRes, schoolRes] = await Promise.all([
         supabase.from("hrmis_staff").select("*").eq("emis_code", emis),
-        supabase.from("schools").select("*").eq("emis_code", emis).single()
+        supabase.from("schools").select("*, sanctioned_posts(*)").eq("emis_code", emis).single()
       ]);
 
       setStaff(staffRes.data || []);
