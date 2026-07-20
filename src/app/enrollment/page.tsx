@@ -5,7 +5,14 @@ import SyncEnrollmentButton from "@/components/SyncEnrollmentButton";
 
 export const revalidate = 0;
 
-export default async function EnrollmentMarkazPage() {
+export default async function EnrollmentMarkazPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const resolvedParams = await searchParams;
+  const filterType = resolvedParams.filter || 'all';
+
   const { data: schoolsData, error } = await supabase.from('schools').select('*');
 
   if (error) {
@@ -14,11 +21,22 @@ export default async function EnrollmentMarkazPage() {
 
   const schools = (schoolsData || []) as any[];
   const safeSchools = schools.filter(s => s.emis_code && s.markaz);
-  const publicSchools = safeSchools.filter(s => 
-    s.school_type === 'SED' && 
-    s.psrp_phase === 'Phase 3' && 
-    !['High', 'Higher Secondary'].includes(s.level)
-  );
+  
+  const publicSchools = safeSchools.filter(s => {
+    // Always exclude High/Higher Secondary
+    if (['High', 'Higher Secondary'].includes(s.level)) return false;
+    
+    // Apply UI Filters
+    if (filterType === 'sed') {
+        return s.school_type === 'SED';
+    }
+    if (filterType === 'phase3') {
+        return s.psrp_phase === 'Phase 3';
+    }
+    
+    // Default: All public schools (exclude PRIVATE)
+    return s.school_type !== 'PRIVATE';
+  });
 
   let totalCurrentEnrollment = 0;
   let totalTargetEnrollment = 0;
@@ -38,12 +56,19 @@ export default async function EnrollmentMarkazPage() {
 
   safeSchools.forEach(s => {
     const m = s.markaz || '';
-    if (
-      targetMarkazs.includes(m) && 
-      s.school_type === 'SED' && 
-      s.psrp_phase === 'Phase 3' && 
-      !['High', 'Higher Secondary'].includes(s.level)
-    ) {
+    
+    let include = false;
+    if (targetMarkazs.includes(m) && !['High', 'Higher Secondary'].includes(s.level)) {
+        if (filterType === 'sed') {
+            include = s.school_type === 'SED';
+        } else if (filterType === 'phase3') {
+            include = s.psrp_phase === 'Phase 3';
+        } else {
+            include = s.school_type !== 'PRIVATE';
+        }
+    }
+
+    if (include) {
       markazMap[m].totalSchools += 1;
       markazMap[m].enrollCurrent += (s.enrollment_total || 0);
       markazMap[m].enrollTarget += (s.enrollment_target || 0);
@@ -82,7 +107,14 @@ export default async function EnrollmentMarkazPage() {
          <div className="p-8 border-b border-slate-100 bg-indigo-50/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h2 className="text-xl font-bold text-slate-900 mb-1">Total Tehsil Enrollment</h2>
-            <p className="text-sm text-slate-500">Overall public school student count.</p>
+            <p className="text-sm text-slate-500 mb-4">Overall student count for the selected filters.</p>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-bold text-slate-500 mr-2 uppercase tracking-wider">Filter:</span>
+              <Link href="/enrollment" className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${filterType === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>All Public Schools</Link>
+              <Link href="/enrollment?filter=sed" className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${filterType === 'sed' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>SED Only</Link>
+              <Link href="/enrollment?filter=phase3" className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${filterType === 'phase3' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>Phase 3 Only</Link>
+            </div>
           </div>
           
           <div className="flex-1 max-w-sm w-full">
@@ -108,7 +140,7 @@ export default async function EnrollmentMarkazPage() {
              {markazStats.map(m => {
                const mPercent = m.enrollTarget > 0 ? Math.round((m.enrollCurrent / m.enrollTarget) * 100) : 0;
                return (
-                 <Link key={m.name} href={`/enrollment/markaz/${encodeURIComponent(m.name)}`} className="group">
+                 <Link key={m.name} href={`/enrollment/markaz/${encodeURIComponent(m.name)}${filterType !== 'all' ? `?filter=${filterType}` : ''}`} className="group">
                     <div className="flex flex-col p-4 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all shadow-sm group-hover:shadow-md cursor-pointer">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-sm font-bold text-slate-800 truncate mr-2 group-hover:text-indigo-700 transition-colors" title={m.name}>{m.name.replace(' - FEMALE', '')}</span>
