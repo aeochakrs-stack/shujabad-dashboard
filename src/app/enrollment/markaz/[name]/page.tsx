@@ -13,14 +13,17 @@ export default async function EnrollmentSchoolPage({ params }: { params: Promise
     .from('schools')
     .select('*')
     .eq('markaz', markazName)
-    .neq('school_type', 'PRIVATE')
     .order('school_name', { ascending: true });
 
   if (error) {
     console.warn("Error fetching schools:", error.message);
   }
 
-  const schools = (schoolsData || []) as any[];
+  const schools = ((schoolsData || []) as any[]).filter(s => 
+    s.school_type === 'SED' && 
+    s.psrp_phase === 'Phase 3' && 
+    !['High', 'Higher Secondary'].includes(s.level)
+  );
 
   let markazCurrentEnrollment = 0;
   let markazTargetEnrollment = 0;
