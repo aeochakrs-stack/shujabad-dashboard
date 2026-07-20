@@ -24,6 +24,7 @@ export default function Sidebar() {
     { href: '/', label: 'Dashboard', icon: Home },
     { href: '/schools', label: 'School and Markaz Wise Data', icon: School },
     { href: '/data-collection', label: 'Data Collection', icon: ClipboardList },
+    { href: '/budget', label: 'Budget Management', icon: FileText },
     ...((role === 'admin' || role === 'developer') ? [{ href: '/upload', label: 'Import Excel', icon: UploadCloud }] : []),
     { href: '/reports', label: 'Generate Reports', icon: FileText },
   ];
@@ -99,7 +100,8 @@ export default function Sidebar() {
           </Link>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-100 hover:text-red-700 font-bold transition-colors cursor-pointer">
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+          >
             <LogOut className="w-5 h-5" />
             Log Out
           </button>
@@ -108,5 +110,3 @@ export default function Sidebar() {
     </>
   );
 }
-
-
