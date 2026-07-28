@@ -3,15 +3,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { ArrowLeft, UserMinus, Calendar, Key, AlertTriangle, Download, Filter, FileText } from 'lucide-react';
+import { ArrowLeft, UserMinus, Calendar, Key, AlertTriangle, Download, Filter, FileText, Contact } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import aeosData from '@/data/aeos.json';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type ReportType = 'retirements' | 'passwords' | 'audit';
+type ReportType = 'retirements' | 'passwords' | 'audit' | 'directory';
 
 export default function ReportsPage() {
   const [activeReport, setActiveReport] = useState<ReportType>('retirements');
@@ -98,6 +99,34 @@ export default function ReportsPage() {
       }).sort((a, b) => b.missing_count - a.missing_count);
   }, [schools]);
 
+  // --- REPORT 4: HEADS & AEOS DIRECTORY ---
+  const directoryReport = useMemo(() => {
+      const normalizeMarkaz = (m: string) => {
+          if (!m) return '';
+          let n = m.toUpperCase().trim();
+          if (n === 'SIKANDARABAD') return 'SKANDARABAD';
+          if (n === 'MARAHA') return 'MAHRA';
+          if (n === 'BASTI MITHU') return 'BASTI MITHO';
+          if (n === 'CHAK RS') return 'CHAK R.S';
+          return n;
+      };
+
+      return schools.map(s => {
+          const normalizedSchoolMarkaz = normalizeMarkaz(s.markaz);
+          const aeo = aeosData.find((a: any) => normalizeMarkaz(a.markaz) === normalizedSchoolMarkaz);
+          
+          return {
+              markaz: s.markaz,
+              emis_code: s.emis_code,
+              school_name: s.school_name,
+              head_name: s.asp_head_name || '-',
+              head_contact: s.asp_head_contact || s.focal_person_cell || '-',
+              aeo_name: aeo ? aeo.name : 'Unknown AEO',
+              aeo_contact: aeo ? aeo.cell_no : '-'
+          };
+      }).sort((a, b) => (a.markaz || '').localeCompare(b.markaz || ''));
+  }, [schools]);
+
   const exportExcel = (data: any[], filename: string) => {
       const worksheet = XLSX.utils.json_to_sheet(data);
       const workbook = XLSX.utils.book_new();
@@ -153,6 +182,13 @@ export default function ReportsPage() {
             >
               <AlertTriangle className={`w-5 h-5 ${activeReport === 'audit' ? 'text-rose-500' : 'text-slate-400'}`} />
               Missing Data Audit
+            </button>
+            <button 
+              onClick={() => setActiveReport('directory')}
+              className={`w-full flex items-center gap-3 px-4 py-4 rounded-xl font-bold text-sm transition-all ${activeReport === 'directory' ? 'bg-white shadow-sm border border-emerald-200 text-emerald-700' : 'text-slate-600 hover:bg-slate-200 border border-transparent'}`}
+            >
+              <Contact className={`w-5 h-5 ${activeReport === 'directory' ? 'text-emerald-500' : 'text-slate-400'}`} />
+              Heads & AEOs Directory
             </button>
           </div>
 
@@ -320,6 +356,49 @@ export default function ReportsPage() {
                               </tr>
                             ))
                           )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+
+                {/* --- HEADS & AEOS DIRECTORY --- */}
+                {activeReport === 'directory' && (
+                  <>
+                    <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900">School Heads & AEOs Directory</h2>
+                        <p className="text-sm text-emerald-600 mt-1">Complete contact list mapped by Markaz.</p>
+                      </div>
+                      <button onClick={() => exportExcel(directoryReport, `Heads_AEOs_Directory`)} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-colors">
+                        <Download className="w-4 h-4" /> Export Excel
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto max-h-[600px]">
+                      <table className="w-full text-left text-sm whitespace-nowrap">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 sticky top-0">
+                          <tr>
+                            <th className="px-6 py-4 font-semibold">Markaz</th>
+                            <th className="px-6 py-4 font-semibold">School EMIS</th>
+                            <th className="px-6 py-4 font-semibold">School Name</th>
+                            <th className="px-6 py-4 font-semibold">Head Name</th>
+                            <th className="px-6 py-4 font-semibold">Head Contact</th>
+                            <th className="px-6 py-4 font-semibold">AEO Name</th>
+                            <th className="px-6 py-4 font-semibold">AEO Contact</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {directoryReport.map((row) => (
+                            <tr key={row.emis_code} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4 text-slate-700 font-medium">{row.markaz}</td>
+                              <td className="px-6 py-4 font-mono text-slate-500 text-xs">{row.emis_code}</td>
+                              <td className="px-6 py-4 font-bold text-slate-800 truncate max-w-[200px]" title={row.school_name}>{row.school_name}</td>
+                              <td className="px-6 py-4 text-slate-700">{row.head_name}</td>
+                              <td className="px-6 py-4 font-mono text-slate-700">{row.head_contact}</td>
+                              <td className="px-6 py-4 font-medium text-emerald-700">{row.aeo_name}</td>
+                              <td className="px-6 py-4 font-mono text-slate-700">{row.aeo_contact}</td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
