@@ -111,7 +111,9 @@ export default function ReportsPage() {
           return n;
       };
 
-      return schools.map(s => {
+      return schools
+        .filter(s => s.school_type === 'SED' && !['High', 'Higher Secondary'].includes(s.level))
+        .map(s => {
           const normalizedSchoolMarkaz = normalizeMarkaz(s.markaz);
           const aeo = aeosData.find((a: any) => normalizeMarkaz(a.markaz) === normalizedSchoolMarkaz);
           
