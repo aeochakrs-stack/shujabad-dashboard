@@ -3,7 +3,7 @@ const cheerio = require('cheerio');
 require('dotenv').config({ path: '.env.local' });
 
 const SUPABASE_URL = 'https://gqtwplrtpajiittpprvj.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_EGujcCf4Yj-ceYhDOSjZoQ_LjBCoAWc';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'sb_publishable_EGujcCf4Yj-ceYhDOSjZoQ_LjBCoAWc';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing Supabase URL or Key");
@@ -92,33 +92,66 @@ async function fetchCoordinates(emisCode) {
 
 async function main() {
     console.log("Starting Nightly Sync for All Schools...");
+    
+    // Fetch all schools from Supabase
     const { data: schools, error } = await supabase.from('schools').select('emis_code, latitude');
-    if (error || !schools) return;
+    
+    if (error || !schools) {
+        console.error("Failed to fetch schools from Supabase:", error);
+        process.exit(1);
+    }
+    
+    console.log(`Found ${schools.length} schools in database.`);
+    
+    let updatedCount = 0;
     
     for (let i = 0; i < schools.length; i++) {
         const school = schools[i];
+        
         console.log(`[${i+1}/${schools.length}] Fetching data for ${school.emis_code}...`);
         const coords = await fetchCoordinates(school.emis_code);
         
         if (coords) {
             const updatePayload = {};
             if (coords.latitude && coords.longitude) {
+                console.log(`  -> Found Coordinates: ${coords.latitude}, ${coords.longitude}`);
                 updatePayload.latitude = coords.latitude;
                 updatePayload.longitude = coords.longitude;
             }
-            if (coords.level) updatePayload.level = coords.level;
+            if (coords.level) {
+                console.log(`  -> Found Level: ${coords.level}`);
+                updatePayload.level = coords.level;
+            }
             
             if (Object.keys(updatePayload).length > 0) {
-                await supabase.from('schools').update(updatePayload).eq('emis_code', school.emis_code);
+                const { error: updateError } = await supabase
+                    .from('schools')
+                    .update(updatePayload)
+                    .eq('emis_code', school.emis_code);
+                    
+                if (updateError) {
+                    console.error(`  -> Failed to update Supabase for ${school.emis_code}:`, updateError.message);
+                } else {
+                    updatedCount++;
+                }
+            } else {
+                console.log(`  -> No coordinates or level found.`);
             }
 
             if (coords.posts && coords.posts.length > 0) {
-                await supabase.from('sanctioned_posts').upsert(coords.posts, { onConflict: 'emis_code, designation' });
+                console.log(`  -> Found ${coords.posts.length} teacher assignment posts.`);
+                const { error: postError } = await supabase.from('sanctioned_posts').upsert(coords.posts, { onConflict: 'emis_code, designation' });
+                if (postError) {
+                    console.error(`  -> Failed to update posts for ${school.emis_code}:`, postError.message);
+                }
             }
         }
+        
+        // Be nice to the SIS server
         await delay(500);
     }
-    console.log(`Sync Complete!`);
+    
+    console.log(`Sync Complete! Updated coordinates for ${updatedCount} schools.`);
 }
 
 main();
