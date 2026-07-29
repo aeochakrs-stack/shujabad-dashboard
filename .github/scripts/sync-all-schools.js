@@ -175,19 +175,14 @@ async function main() {
                 const existingNames = new Set((existingStaff || []).map(s => s.teacher_name.toLowerCase()));
                 const liveNames = new Set(coords.liveTeachers.map(t => t.teacher_name.toLowerCase()));
                 
-                // 1. Mark missing as Transferred
-                const missingStaffIds = (existingStaff || [])
-                   .filter(s => !liveNames.has(s.teacher_name.toLowerCase()))
-                   .map(s => s.id);
-                   
-                if (missingStaffIds.length > 0) {
-                   await supabase.from('hrmis_staff').update({ status: 'Transferred', missing_from_sis: true }).in('id', missingStaffIds);
-                   console.log(`  -> Marked ${missingStaffIds.length} teachers as Transferred/Missing.`);
-                }
+                // 1. Mark missing as Transferred (DISABLED due to name matching issues)
+                // We no longer auto-transfer teachers because names on SIS often don't match HRMIS exactly
                 
-                // 2. Insert new teachers (like SSTs)
+                // 2. Insert missing SSTs and SSEs
+                // Only insert if they are SST or SSE (to avoid duplicating PSTs with slightly different spelling)
                 const newTeachers = coords.liveTeachers
                    .filter(t => !existingNames.has(t.teacher_name.toLowerCase()))
+                   .filter(t => t.designation.includes('SST') || t.designation.includes('SSE'))
                    .map(t => ({ ...t, id: 'SIS-' + Math.random().toString(36).substr(2, 9) }));
                 
                 if (newTeachers.length > 0) {
