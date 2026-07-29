@@ -16,6 +16,14 @@ async function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function fuzzyMatch(name1, name2) {
+    let n1 = (name1 || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(x => x.length > 2);
+    let n2 = (name2 || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(x => x.length > 2);
+    
+    if ((name1 || '').toLowerCase().replace(/[^a-z]/g, '') === (name2 || '').toLowerCase().replace(/[^a-z]/g, '')) return true;
+    return n1.some(w => n2.includes(w));
+}
+
 async function fetchCoordinates(emisCode) {
     const url = `https://sis.pesrp.edu.pk/dashboard/rationalization_posts_tab?district_id=22&tehsil_id=118&markaz_id=&school_id=&s_id_emis_code=${emisCode}`;
     try {
@@ -170,32 +178,50 @@ async function main() {
                 console.log(`  -> Found ${coords.liveTeachers.length} active teachers on SIS.`);
                 
                 // Fetch existing staff for this school
-                const { data: existingStaff } = await supabase.from('hrmis_staff').select('id, teacher_name').eq('emis_code', school.emis_code);
+                // Robust matching to avoid duplicates due to spelling differences
+                let availableHrmis = [...(existingStaff || [])];
+                let matchedHrmisIds = new Set();
+                let unmatchedSis = [];
+
+                for (let sis of coords.liveTeachers) {
+                    let sisDesig = (sis.designation || '').toLowerCase().split(' ')[0]; 
+                    
+                    // 1. Try to match by fuzzy name + exact designation base
+                    let matchIdx = availableHrmis.findIndex(h => {
+                        let hDesig = (h.designation || '').toLowerCase().split(' ')[0];
+                        return fuzzyMatch(h.teacher_name, sis.teacher_name) && hDesig === sisDesig;
+                    });
+                    
+                    // 2. Fallback: match just by fuzzy name (e.g. if they got promoted from PST to EST)
+                    if (matchIdx === -1) {
+                        matchIdx = availableHrmis.findIndex(h => fuzzyMatch(h.teacher_name, sis.teacher_name));
+                    }
+                    
+                    if (matchIdx !== -1) {
+                        matchedHrmisIds.add(availableHrmis[matchIdx].id);
+                        availableHrmis.splice(matchIdx, 1);
+                    } else {
+                        unmatchedSis.push(sis);
+                    }
+                }
                 
-                const existingNames = new Set((existingStaff || []).map(s => s.teacher_name.toLowerCase()));
-                const liveNames = new Set(coords.liveTeachers.map(t => t.teacher_name.toLowerCase()));
+                // 1. Mark missing as Transferred
+                const missingStaffIds = (existingStaff || []).filter(h => !matchedHrmisIds.has(h.id)).map(h => h.id);
+                if (missingStaffIds.length > 0) {
+                   await supabase.from('hrmis_staff').update({ status: 'Transferred', missing_from_sis: true }).in('id', missingStaffIds);
+                   console.log(`  -> Marked ${missingStaffIds.length} teachers as Transferred/Missing.`);
+                }
                 
-                // 1. Mark missing as Transferred (DISABLED due to name matching issues)
-                // We no longer auto-transfer teachers because names on SIS often don't match HRMIS exactly
-                
-                // 2. Insert missing SSTs and SSEs
-                // Only insert if they are SST or SSE (to avoid duplicating PSTs with slightly different spelling)
-                const newTeachers = coords.liveTeachers
-                   .filter(t => !existingNames.has(t.teacher_name.toLowerCase()))
-                   .filter(t => t.designation.includes('SST') || t.designation.includes('SSE'))
-                   .map(t => ({ ...t, id: 'SIS-' + Math.random().toString(36).substr(2, 9) }));
-                
+                // 2. Insert new teachers
+                const newTeachers = unmatchedSis.map(t => ({ ...t, id: 'SIS-' + Math.random().toString(36).substr(2, 9) }));
                 if (newTeachers.length > 0) {
                    const { error: insError } = await supabase.from('hrmis_staff').insert(newTeachers);
                    if (insError) console.error("Error inserting teachers:", insError);
                    else console.log(`  -> Inserted ${newTeachers.length} new teachers from SIS.`);
                 }
                 
-                // 3. Ensure existing live teachers are Active
-                const activeStaffIds = (existingStaff || [])
-                   .filter(s => liveNames.has(s.teacher_name.toLowerCase()))
-                   .map(s => s.id);
-                   
+                // 3. Ensure existing matched teachers are Active
+                const activeStaffIds = Array.from(matchedHrmisIds);
                 if (activeStaffIds.length > 0) {
                    await supabase.from('hrmis_staff').update({ status: 'Active', missing_from_sis: false }).in('id', activeStaffIds);
                 }
