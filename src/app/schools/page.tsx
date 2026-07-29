@@ -83,6 +83,7 @@ export default function SchoolsDataPage() {
   const [filterBps, setFilterBps] = useState<Set<string>>(new Set());
   const [filterDesignation, setFilterDesignation] = useState<Set<string>>(new Set());
   const [filterSchoolType, setFilterSchoolType] = useState<Set<string>>(new Set());
+  const [filterSchoolPhase, setFilterSchoolPhase] = useState<Set<string>>(new Set());
   const [filterSchoolLevel, setFilterSchoolLevel] = useState<Set<string>>(new Set());
   const [filterSchoolGender, setFilterSchoolGender] = useState<Set<string>>(new Set());
   const [filterAcademic, setFilterAcademic] = useState<Set<string>>(new Set());
@@ -254,6 +255,7 @@ export default function SchoolsDataPage() {
   const uniqueBps = useMemo(() => Array.from(new Set(staff.map(s => String(s.bps)).filter(Boolean).filter(b => b !== 'null' && b !== 'undefined'))).sort((a,b) => Number(a) - Number(b)), [staff]);
   const uniqueDesignations = useMemo(() => Array.from(new Set(staff.map(s => s.designation).filter(Boolean))).sort(), [staff]);
   const uniqueTypes = useMemo(() => Array.from(new Set(schools.map(s => s.school_type).filter(Boolean))).sort(), [schools]);
+  const uniquePhases = useMemo(() => Array.from(new Set(schools.map(s => s.psrp_phase).filter(Boolean))).sort(), [schools]);
   const uniqueLevels = useMemo(() => Array.from(new Set(schools.map(s => s.level).filter(Boolean))).sort(), [schools]);
   
   // FIXED: Gender filter now looks at the Teacher's gender from hrmis_staff, not the School's gender
@@ -348,6 +350,7 @@ export default function SchoolsDataPage() {
     }
     if (filterEmis.size > 0) result = result.filter(s => filterEmis.has(String(s.emis_code)));
     if (filterSchoolType.size > 0) result = result.filter(s => filterSchoolType.has(s.schools?.school_type));
+    if (filterSchoolPhase.size > 0) result = result.filter(s => filterSchoolPhase.has(s.schools?.psrp_phase));
     if (filterSchoolLevel.size > 0) result = result.filter(s => filterSchoolLevel.has(s.schools?.level));
     if (filterSchoolGender.size > 0) result = result.filter(s => filterSchoolGender.has(s.gender)); // FIXED: Teacher Gender
 
@@ -360,7 +363,7 @@ export default function SchoolsDataPage() {
       ].join(' ').toLowerCase();
       return matchesSearch(rowString, searchQuery);
     });
-  }, [staff, searchQuery, filterBps, filterDesignation, filterMarkaz, filterEmis, filterSchoolType, filterSchoolLevel, filterSchoolGender, filterStatus, uniqueMarkaz.length]);
+  }, [staff, searchQuery, filterBps, filterDesignation, filterMarkaz, filterEmis, filterSchoolType, filterSchoolPhase, filterSchoolLevel, filterSchoolGender, filterStatus, uniqueMarkaz.length]);
 
   const displayedSchools = rowsLimit === 'All' ? filteredSchools : filteredSchools.slice(0, rowsLimit);
   const displayedStaff = rowsLimit === 'All' ? filteredStaff : filteredStaff.slice(0, rowsLimit);
@@ -393,6 +396,7 @@ export default function SchoolsDataPage() {
       setFilterBps(new Set());
       setFilterDesignation(new Set());
       setFilterSchoolType(new Set());
+      setFilterSchoolPhase(new Set());
       setFilterSchoolLevel(new Set());
       setFilterSchoolGender(new Set());
       setFilterAcademic(new Set());
@@ -527,6 +531,9 @@ export default function SchoolsDataPage() {
             <MultiSelectDropdown label="Markaz" options={uniqueMarkaz as string[]} selected={filterMarkaz} onChange={(v) => toggleFilter(setFilterMarkaz, v)} />
             <MultiSelectDropdown label="EMIS Code" options={uniqueEmis as string[]} selected={filterEmis} onChange={(v) => toggleFilter(setFilterEmis, v)} />
             <MultiSelectDropdown label="School Type" options={uniqueTypes as string[]} selected={filterSchoolType} onChange={(v) => toggleFilter(setFilterSchoolType, v)} />
+            {activeTab === 'staff' && (
+              <MultiSelectDropdown label="Phase" options={uniquePhases as string[]} selected={filterSchoolPhase} onChange={(v) => toggleFilter(setFilterSchoolPhase, v)} />
+            )}
             <MultiSelectDropdown label="Level" options={uniqueLevels as string[]} selected={filterSchoolLevel} onChange={(v) => toggleFilter(setFilterSchoolLevel, v)} />
             <MultiSelectDropdown label="Teacher Gender" options={uniqueGenders as string[]} selected={filterSchoolGender} onChange={(v) => toggleFilter(setFilterSchoolGender, v)} />
             <MultiSelectDropdown label="BPS Scale" options={uniqueBps as string[]} selected={filterBps} onChange={(v) => toggleFilter(setFilterBps, v)} />
