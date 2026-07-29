@@ -121,15 +121,15 @@ async function fetchCoordinates(emisCode) {
 async function main() {
     console.log("Starting Nightly Sync for All Schools...");
     
-    // Fetch all schools from Supabase
-    const { data: schools, error } = await supabase.from('schools').select('emis_code, latitude');
+    // Fetch all SED schools from Supabase
+    const { data: schools, error } = await supabase.from('schools').select('emis_code, latitude').eq('school_type', 'SED');
     
     if (error || !schools) {
         console.error("Failed to fetch schools from Supabase:", error);
         process.exit(1);
     }
     
-    console.log(`Found ${schools.length} schools in database.`);
+    console.log(`Found ${schools.length} SED schools in database.`);
     
     let updatedCount = 0;
     
@@ -178,6 +178,8 @@ async function main() {
                 console.log(`  -> Found ${coords.liveTeachers.length} active teachers on SIS.`);
                 
                 // Fetch existing staff for this school
+                const { data: existingStaff } = await supabase.from('hrmis_staff').select('id, teacher_name, designation').eq('emis_code', school.emis_code);
+                
                 // Robust matching to avoid duplicates due to spelling differences
                 let availableHrmis = [...(existingStaff || [])];
                 let matchedHrmisIds = new Set();
