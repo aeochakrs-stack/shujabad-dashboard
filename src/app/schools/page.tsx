@@ -318,8 +318,8 @@ export default function SchoolsDataPage() {
   const filteredStaff = useMemo(() => {
     let result = staff;
     // Apply Status filter
-    if (filterStatus === 'Active') result = result.filter(s => !s.is_retired);
-    else if (filterStatus === 'Retired') result = result.filter(s => s.is_retired);
+    if (filterStatus === 'Active') result = result.filter(s => s.status === 'Active');
+    else if (filterStatus === 'Retired') result = result.filter(s => s.status === 'Retired' || s.status === 'Transferred');
 
     // Apply Staff filters
     if (filterBps.size > 0) result = result.filter(s => filterBps.has(String(s.bps)));
@@ -541,7 +541,7 @@ export default function SchoolsDataPage() {
                 className="appearance-none bg-white border border-slate-200 text-slate-700 text-sm rounded-lg hover:border-indigo-300 px-3 py-2 pr-8 font-medium shadow-sm transition-colors focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="Active">Show Active Staff</option>
-                <option value="Retired">Show Retired Staff</option>
+                <option value="Retired">Show Retired / Transferred</option>
                 <option value="All">Show All Staff</option>
               </select>
               <ChevronDown className="absolute right-2 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
