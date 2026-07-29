@@ -3,7 +3,7 @@ const cheerio = require('cheerio');
 require('dotenv').config({ path: '.env.local' });
 
 const SUPABASE_URL = 'https://gqtwplrtpajiittpprvj.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'sb_publishable_EGujcCf4Yj-ceYhDOSjZoQ_LjBCoAWc';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_PClZrvzTTNUn5lis2OHIkA_9jMW8Fy3'; // Hardcoded temporarily so user can run it locally
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing Supabase URL or Key");
@@ -36,6 +36,7 @@ async function fetchCoordinates(emisCode) {
         let longitude = null;
         let level = null;
         let posts = [];
+        let liveTeachers = [];
         
         // Find the map link inside the HTML
         const mapLink = $('a[href*="show_google_map_school"]').attr('href');
@@ -70,7 +71,7 @@ async function fetchCoordinates(emisCode) {
         }
         
         // Find Teacher Assignment Posts
-        $('table.sanctioned_post tbody tr').each((_, el) => {
+        $('table').filter((_, tbl) => $(tbl).find('th').text().includes('Assigned Teacher')).find('tbody tr').each((_, el) => {
             if ($(el).hasClass('total')) return;
             const cells = $(el).find('td');
             if (cells.length < 6) return;
@@ -81,9 +82,28 @@ async function fetchCoordinates(emisCode) {
             if (designation) {
                 posts.push({ emis_code: emisCode, designation, sanctioned, filled, vacant });
             }
+            
+            const assignedText = $(cells[5]).text().trim();
+            if (assignedText) {
+                const parts = assignedText.split('**********').filter(Boolean);
+                for (const p of parts) {
+                    const segments = p.split(' / ');
+                    if (segments.length >= 3) {
+                        const name = segments[1].trim();
+                        const desig = segments[2].trim().replace(/\/+$/, '').trim();
+                        liveTeachers.push({
+                            teacher_name: name,
+                            designation: desig,
+                            emis_code: emisCode,
+                            status: 'Active',
+                            missing_from_sis: false
+                        });
+                    }
+                }
+            }
         });
         
-        return { latitude, longitude, level, posts };
+        return { latitude, longitude, level, posts, liveTeachers };
     } catch (e) {
         console.error(`Error fetching coords for ${emisCode}:`, e.message);
         return null;
@@ -143,6 +163,46 @@ async function main() {
                 const { error: postError } = await supabase.from('sanctioned_posts').upsert(coords.posts, { onConflict: 'emis_code, designation' });
                 if (postError) {
                     console.error(`  -> Failed to update posts for ${school.emis_code}:`, postError.message);
+                }
+            }
+            
+            if (coords.liveTeachers && coords.liveTeachers.length > 0) {
+                console.log(`  -> Found ${coords.liveTeachers.length} active teachers on SIS.`);
+                
+                // Fetch existing staff for this school
+                const { data: existingStaff } = await supabase.from('hrmis_staff').select('id, teacher_name').eq('emis_code', school.emis_code);
+                
+                const existingNames = new Set((existingStaff || []).map(s => s.teacher_name.toLowerCase()));
+                const liveNames = new Set(coords.liveTeachers.map(t => t.teacher_name.toLowerCase()));
+                
+                // 1. Mark missing as Transferred
+                const missingStaffIds = (existingStaff || [])
+                   .filter(s => !liveNames.has(s.teacher_name.toLowerCase()))
+                   .map(s => s.id);
+                   
+                if (missingStaffIds.length > 0) {
+                   await supabase.from('hrmis_staff').update({ status: 'Transferred', missing_from_sis: true }).in('id', missingStaffIds);
+                   console.log(`  -> Marked ${missingStaffIds.length} teachers as Transferred/Missing.`);
+                }
+                
+                // 2. Insert new teachers (like SSTs)
+                const newTeachers = coords.liveTeachers
+                   .filter(t => !existingNames.has(t.teacher_name.toLowerCase()))
+                   .map(t => ({ ...t, id: 'SIS-' + Math.random().toString(36).substr(2, 9) }));
+                
+                if (newTeachers.length > 0) {
+                   const { error: insError } = await supabase.from('hrmis_staff').insert(newTeachers);
+                   if (insError) console.error("Error inserting teachers:", insError);
+                   else console.log(`  -> Inserted ${newTeachers.length} new teachers from SIS.`);
+                }
+                
+                // 3. Ensure existing live teachers are Active
+                const activeStaffIds = (existingStaff || [])
+                   .filter(s => liveNames.has(s.teacher_name.toLowerCase()))
+                   .map(s => s.id);
+                   
+                if (activeStaffIds.length > 0) {
+                   await supabase.from('hrmis_staff').update({ status: 'Active', missing_from_sis: false }).in('id', activeStaffIds);
                 }
             }
         }
