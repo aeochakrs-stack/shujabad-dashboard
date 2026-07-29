@@ -31,6 +31,7 @@ export const SCHOOL_COLUMNS: ExportColumn[] = [
 export const STAFF_COLUMNS: ExportColumn[] = [
     { key: 'emis_code', label: 'EMIS Code' },
     { key: 'school_name', label: 'School Name' },
+    { key: 'markaz', label: 'Markaz' },
     { key: 'personnel_no', label: 'Personnel No.' },
     { key: 'teacher_name', label: 'Teacher Name' },
     { key: 'father_name', label: 'Father Name' },
