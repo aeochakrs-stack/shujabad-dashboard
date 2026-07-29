@@ -37,6 +37,8 @@ export const STAFF_COLUMNS: ExportColumn[] = [
     { key: 'father_name', label: 'Father Name' },
     { key: 'designation', label: 'Designation' },
     { key: 'status', label: 'Status' },
+    { key: 'school_type', label: 'School Type (SED/PSRP)' },
+    { key: 'phase', label: 'Phase' },
     { key: 'bps', label: 'BPS' },
     { key: 'seniority', label: 'Seniority' },
     { key: 'gender', label: 'Gender' },
