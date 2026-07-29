@@ -24,7 +24,7 @@ function fuzzyMatch(name1, name2) {
     return n1.some(w => n2.includes(w));
 }
 
-async function fetchCoordinates(emisCode) {
+async function fetchCoordinates(emisCode, retries = 3) {
     const url = `https://sis.pesrp.edu.pk/dashboard/rationalization_posts_tab?district_id=22&tehsil_id=118&markaz_id=&school_id=&s_id_emis_code=${emisCode}`;
     try {
         const response = await fetch(url, {
@@ -113,6 +113,11 @@ async function fetchCoordinates(emisCode) {
         
         return { latitude, longitude, level, posts, liveTeachers };
     } catch (e) {
+        if (retries > 0) {
+            console.log(`  -> Fetch failed for ${emisCode}. Retrying... (${retries} attempts left)`);
+            await delay(2000); // Wait 2 seconds before retrying
+            return fetchCoordinates(emisCode, retries - 1);
+        }
         console.error(`Error fetching coords for ${emisCode}:`, e.message);
         return null;
     }
@@ -231,7 +236,7 @@ async function main() {
         }
         
         // Be nice to the SIS server
-        await delay(500);
+        await delay(1000);
     }
     
     console.log(`Sync Complete! Updated coordinates for ${updatedCount} schools.`);
