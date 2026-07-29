@@ -36,6 +36,7 @@ export const STAFF_COLUMNS: ExportColumn[] = [
     { key: 'teacher_name', label: 'Teacher Name' },
     { key: 'father_name', label: 'Father Name' },
     { key: 'designation', label: 'Designation' },
+    { key: 'status', label: 'Status' },
     { key: 'bps', label: 'BPS' },
     { key: 'seniority', label: 'Seniority' },
     { key: 'gender', label: 'Gender' },
@@ -60,4 +61,4 @@ export const STAFF_COLUMNS: ExportColumn[] = [
 ];
 
 export const DEFAULT_SCHOOL_COLS = ['emis_code', 'school_name', 'markaz', 'school_type', 'level', 'enrollment_current', 'total_sanctioned', 'total_filled', 'total_vacant', 'solar_meter_reference'];
-export const DEFAULT_STAFF_COLS = ['emis_code', 'teacher_name', 'designation', 'cnic', 'phone'];
+export const DEFAULT_STAFF_COLS = ['emis_code', 'teacher_name', 'designation', 'status', 'cnic', 'phone'];
