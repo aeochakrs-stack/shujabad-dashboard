@@ -424,29 +424,14 @@ export default function SchoolsDataPage() {
             }
             
             Object.assign(fullRow, {
-                emis_code: item.emis_code,
-                school_name: item.school_name,
-                markaz: item.markaz,
-                school_type: item.school_type,
-                school_gender: item.gender,
-                school_level: item.level,
-                psrp_phase: item.psrp_phase,
-                sis_password: item.sis_password,
-                dengue_password: item.dengue_password,
-                focal_person_cell: item.focal_person_cell,
+                ...item,
                 ...censusObj
             });
         } else {
             Object.assign(fullRow, {
-                teacher_name: item.teacher_name,
-                designation: item.designation,
-                bps: item.bps,
-                date_of_birth: item.dob,
-                phone: item.phone,
-                cnic: item.cnic,
-                school_name: item.schools?.school_name || 'Unknown',
-                school_emis: item.emis_code,
-                markaz: item.schools?.markaz || 'Unknown'
+                ...item,
+                school_name: item.schools?.school_name || item.school_name || 'Unknown',
+                markaz: item.schools?.markaz || item.markaz || 'Unknown'
             });
         }
 
@@ -736,8 +721,7 @@ export default function SchoolsDataPage() {
                       </td>
                       {STAFF_COLUMNS.filter(c => visibleStaffCols.includes(c.key)).map(col => {
                         let val = s[col.key];
-                        // In the old code, school_name was accessed via s.schools.school_name
-                        if (col.key === 'school_name') val = s.schools?.school_name;
+                        if (col.key === 'school_name') val = s.schools?.school_name || s.school_name;
                         return (
                           <td key={col.key} className="px-6 py-4 text-slate-700">
                             {renderCell(val, col.key, s)}
