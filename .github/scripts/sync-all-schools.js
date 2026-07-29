@@ -3,7 +3,7 @@ const cheerio = require('cheerio');
 require('dotenv').config({ path: '.env.local' });
 
 const SUPABASE_URL = 'https://gqtwplrtpajiittpprvj.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_PClZrvzTTNUn5lis2OHIkA_9jMW8Fy3'; // Hardcoded temporarily so user can run it locally
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing Supabase URL or Key");
